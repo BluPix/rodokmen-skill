@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """Matriky SOA Třeboň (digi.ceskearchivy.cz) bez prohlížeče.
 
-ZATÍM VYPNUTO: archiv od 2. 11. 2026 nástroj odmítá (HTTP 403) a brzda tools/slusne.py ho proto zastaví.
-Matriky čti v prohlížeči (reference/portaly.md, SOA Třeboň). Nástroj zůstává pro případ, že archiv přístup povolí.
-
 Použití (z kořene projektu):
   trebon.py misto "Obec"                 -> id místa a jeho název (diakritiku a mezery nástroj odstraní sám; portál vybere
                                             jedno místo – VŽDY zkontroluj vypsaný název a okres, u stejnojmenných obcí
@@ -70,11 +67,15 @@ def misto(nazev):
                  f"(Malá Chyška → Chyšky) a v popisu jejích knih najdi tuto osadu; id knihy jinak najdi na portálu v prohlížeči.")
     pid = m.group(1)
     page, _ = get(f"/pages/klicova/rejinfo.php?typ=&id={pid}&l=&bookid=")
-    t = re.search(r"document\.title=\"([^\"]*)\"", page)
+    t = (re.search(r'document\.getElementById\("title_nazev"\)\.innerHTML="([^"]*)"', page)
+         or re.search(r"class='sresaut'[^>]*>(.*?)</span>", page)
+         or re.search(r'document\.title="([^"]*)"', page))
     if not t:
         page, _ = get(f"/description.php?id={pid}&menu=4")
-        t = re.search(r"document\.title=\"([^\"]*)\"", page)
-    return pid, (t.group(1).strip() if t else "")
+        t = (re.search(r'document\.getElementById\("title_nazev"\)\.innerHTML="([^"]*)"', page)
+             or re.search(r"class='sresaut'[^>]*>(.*?)</span>", page)
+             or re.search(r'document\.title="([^"]*)"', page))
+    return pid, (text(t.group(1)) if t else "")
 
 
 def svazky(arg):

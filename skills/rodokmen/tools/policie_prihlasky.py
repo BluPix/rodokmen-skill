@@ -20,7 +20,8 @@ for _s in (sys.stdout, sys.stderr):   # UTF-8 výstup i na Windows bez -X utf8 (
 
 BASE = "https://digi.nacr.cz/prihlasky2/"
 _op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
-_op.addheaders = [("User-Agent", "Mozilla/5.0 (rodokmen)")]
+_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+_op.addheaders = [("User-Agent", _UA)]
 
 
 def get(url, data=None):

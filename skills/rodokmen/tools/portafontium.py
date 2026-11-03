@@ -27,7 +27,7 @@ BASE = "https://www.portafontium.eu"
 ARCHIV = "soap-pn"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = cache.cesta("portafontium")   # stránky knih (seznam snímků) i celé snímky
-UA = {"User-Agent": "Mozilla/5.0 (rodokmen)"}   # bez prohlížečového User-Agentu portál vrací 403
+UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 PAUZA = 0.5   # s před každým požadavkem – ohled na server i při volání ve smyčce
 
 # Server portálu posílá jen svůj certifikát bez mezilehlého (prohlížeče a curl si ho dohledají, Python ne →
