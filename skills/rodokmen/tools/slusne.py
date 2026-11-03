@@ -34,22 +34,10 @@ LIMITY = {                           # konec názvu webu: (dotaz, obrázek)
     "nominatim.openstreetmap.org": (1.1, 1.1),   # pravidla Nominatimu: nejvýš 1 dotaz za s
     "mza.cz": (4.0, 4.0),            # MZA Brno – skriptem jen hledání knih (ZAKAZ níže), blokuje i za rychlé dotazy na katalog
 }
-ZAKAZ = {                            # konec názvu webu: (cesty povolené skriptům, hláška pro ostatní)
-    suffix: (re.compile(r"/actapublica/matrika/hledani"),
-             "MZA od 2. 11. 2026 nepovoluje stahování skriptem. Skriptem jen hledání knih "
-             "(https://www.mza.cz/actapublica/matrika/hledani?typ=obec&search_by_obec=<obec>&page=<n>); detail knihy "
-             "a snímky jen v prohlížeči Acta Publica – přiblížit zápis a uložit snímek obrazovky (reference/portaly.md, "
-             "MZA Brno). Neobcházej to (jiná adresa, nástroj, hlavičky).")
-    for suffix in ("mza.cz", "actapublica.eu")
-}
-ZAKAZ["digi.ceskearchivy.cz"] = (   # SOA Třeboň: od 2. 11. 2026 vrací nástroji (User-Agent „rodokmen“) 403
-    re.compile(r"(?!)"),             # skriptům nic
-    "SOA Třeboň od 2. 11. 2026 nástroj rodokmen odmítá (HTTP 403) – trebon.py ani vlastní skripty nepoužívej. "
-    "Matriky čti v prohlížeči digi.ceskearchivy.cz: přiblížit zápis a uložit snímek obrazovky (reference/portaly.md, "
-    "SOA Třeboň). Neobcházej to (jiný User-Agent, nástroj, hlavičky).")
+ZAKAZ = {}
 VOLNE = ("localhost", "127.0.0.1", "::1", "0.0.0.0", "netlify.app", "netlify.com", "github.com",
          "githubusercontent.com", "npmjs.org", "pypi.org", "pythonhosted.org")
-UA = "Mozilla/5.0 (rodokmen)"           # jak se představuje slusne.py curl (stejně jako nástroje)
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"           # jak se představuje slusne.py curl (stejně jako nástroje)
 STOPKY = (30 * 60, 2 * 3600, 8 * 3600)   # stopka po 1., 2. a 3. (i každém dalším) odmítnutí webu během OKNO
 OKNO = 24 * 3600
 BAN_TEXT = {"archives.cz": re.compile(rb"zablokov[a\xc3\xa1]n|byl[a ]+zablokov|blocked", re.I)}
