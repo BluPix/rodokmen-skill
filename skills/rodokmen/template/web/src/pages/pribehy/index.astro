@@ -1,6 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { docs, config, lineByK, href } from '../../lib/data.js';
+import { docs, config, lineByK, href, lines, people } from '../../lib/data.js';
+const otherStories = Object.values(lines).filter((x) => x.story && x.k !== (config.pribeh?.rod ?? 8));
+const personStories = Object.values(people).filter((p) => p.story).sort((a, b) => (a.k ?? 1e9) - (b.k ?? 1e9));
 import { Content, frontmatter } from '../../generated/pribeh.md';
 const line = lineByK[config.pribeh?.rod ?? 8];
 ---
@@ -10,6 +12,23 @@ const line = lineByK[config.pribeh?.rod ?? 8];
   {frontmatter.lead && <p class="lead">{frontmatter.lead}</p>}
   <div class="prose"><Content /></div>
 
+  {otherStories.length > 0 && (
+    <>
+      <h2>Příběhy dalších rodů</h2>
+      <div class="grid2">
+        {otherStories.map((x) => <a class="card card-link" href={href.line(x.slug)}><h3><span style={`display:inline-block;width:.7em;height:.7em;border-radius:50%;background:${x.color};margin-right:.3em`}></span>{x.name}</h3><p class="small muted">{x.desc}</p><span class="more-link">Číst příběh rodu →</span></a>)}
+      </div>
+    </>
+  )}
+  {personStories.length > 0 && (
+    <>
+      <h2>Příběhy lidí</h2>
+      <p class="small muted">Osudy jednotlivých předků a příbuzných, jak je vyprávějí matriční zápisy.</p>
+      <div class="grid2">
+        {personStories.map((p) => <a class="card card-link" href={href.person(p.slug)}><h3>{p.name} <span class="small muted">{p.years}</span></h3><p class="small">{p.storyExcerpt}</p><span class="more-link">Celý příběh →</span></a>)}
+      </div>
+    </>
+  )}
   <div class="next-step">
     <p><strong>Chcete víc?</strong> Další objevy z rodokmenu najdete v zajímavostech.</p>
     <a class="btn" href="/zajimavosti/">Zajímavosti z rodokmenu →</a>

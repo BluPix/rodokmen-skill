@@ -4,10 +4,16 @@ import PersonLink from '../components/PersonLink.astro';
 import { recordList, dateKey, href } from '../lib/data.js';
 const list = [...recordList].sort((a, b) => dateKey(a.date) - dateKey(b.date));
 const kinds = [...new Set(list.map((r) => r.kindName))];
+const transcriptTitle = (r) =>
+  r.kind === 'J'
+    ? 'Text pramene a překlad / vysvětlení'
+    : r.kind === 'S'
+    ? 'Text ze sčítání lidu a přepis'
+    : 'Text z matriky a překlad';
 ---
-<Base title="Zápisy z matrik">
-  <h1>Zápisy z matrik</h1>
-  <p class="lead">Všech {list.length} zápisů, na kterých rodokmen stojí – chronologicky. U každého je výřez snímku s vyznačeným místem, plné rozlišení a odkaz do archivu. Co v matrikách zatím chybí nebo si odporuje, najdete v přehledu <a href="/hledame/">co ještě hledáme</a>.</p>
+<Base title="Zápisy z matrik a další prameny">
+  <h1>Zápisy a prameny</h1>
+  <p class="lead">Všech {list.length} zápisů a pramenů, na kterých rodokmen stojí – chronologicky. U každého je výřez snímku s vyznačeným místem, plné rozlišení a odkaz do archivu či databáze. Co v pramenech zatím chybí nebo si odporuje, najdete v přehledu <a href="/hledame/">co ještě hledáme</a>.</p>
   <p class="chips">
     <button class="chip" data-k="" type="button">vše</button>
     {kinds.map((k) => <button class="chip" data-k={k} type="button">{k}</button>)}
@@ -22,8 +28,8 @@ const kinds = [...new Set(list.map((r) => r.kindName))];
           <td><a href={href.record(r.key)}>{r.title}</a><div class="small muted">{r.volume || r.vdesc}</div>
             {r.orig && (
               <details class="transcript">
-                <summary>Text z matriky a překlad</summary>
-                <div class="tr-grid"><div><h4>Přepis originálu</h4><p class="tr-orig">{r.orig}</p></div><div><h4>Překlad</h4><p class="tr-cs">{r.cs}</p></div></div>
+                <summary>{transcriptTitle(r)}</summary>
+                <div class="tr-grid"><div><h4>Přepis originálu</h4><p class="tr-orig">{r.orig}</p></div><div><h4>{r.kind === 'J' ? 'Překlad / vysvětlení' : 'Překlad'}</h4><p class="tr-cs">{r.cs}</p></div></div>
               </details>
             )}
           </td>

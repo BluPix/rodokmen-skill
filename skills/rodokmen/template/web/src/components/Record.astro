@@ -3,11 +3,21 @@ import { records, href } from '../lib/data.js';
 import PersonLink from './PersonLink.astro';
 const { id, showPeople = false, exclude, open = false } = Astro.props;
 const r = records[id];
+
+const transcriptTitle = r?.kind === 'J'
+  ? 'Text pramene a překlad / vysvětlení'
+  : r?.kind === 'S'
+  ? 'Text ze sčítání lidu a přepis'
+  : 'Text z matriky a překlad';
+
+const scanLabel = r?.kind === 'J'
+  ? (isNaN(Number(r.scan)) ? `kód ${r.scan}` : `strana ${r.scan}`)
+  : r?.scan ? `snímek ${r.scan}` : '';
 ---
 {r && (
   <article class="rec">
     <div>
-      <div class="meta"><span class="kind">{r.kindName}</span>{r.date} · {r.archive && r.volume ? r.volume : r.vdesc} · snímek {r.scan}</div>
+      <div class="meta"><span class="kind">{r.kindName}</span>{r.date} · {r.archive && r.volume ? r.volume : r.vdesc}{scanLabel && ` · ${scanLabel}`}</div>
       <div class="title"><a href={href.record(r.key)}>{r.title}</a></div>
       <div class="small">{r.summary}</div>
       {showPeople && r.people.filter((s) => s !== exclude).length > 0 && (
@@ -17,17 +27,17 @@ const r = records[id];
     {r.img && (
       <a class="scan" href={r.full ? `/zdroje/${r.key}.jpg` : `/img/${r.key}.jpg`} target="_blank" rel="noopener">
         <span class="hl-wrap">
-          <img src={`/img/${r.key}.jpg`} alt={`Výřez zápisu: ${r.title}`} loading="lazy" />
+          <img src={`/img/${r.key}.jpg`} alt={`Výřez: ${r.title}`} loading="lazy" />
           {r.boxes.map(([x0, y0, x1, y1]) => <span class="hl" style={`left:${x0 * 100}%;top:${y0 * 100}%;width:${(x1 - x0) * 100}%;height:${(y1 - y0) * 100}%`}></span>)}
         </span>
       </a>
     )}
     {r.orig && (
       <details class="transcript" open={open}>
-        <summary>Text z matriky a překlad</summary>
+        <summary>{transcriptTitle}</summary>
         <div class="tr-grid">
           <div><h4>Přepis originálu</h4><p class="tr-orig">{r.orig}</p></div>
-          <div><h4>Překlad</h4><p class="tr-cs">{r.cs}</p></div>
+          <div><h4>{r.kind === 'J' ? 'Překlad / vysvětlení' : 'Překlad'}</h4><p class="tr-cs">{r.cs}</p></div>
         </div>
       </details>
     )}

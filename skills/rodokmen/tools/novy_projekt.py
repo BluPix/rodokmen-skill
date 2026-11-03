@@ -126,7 +126,7 @@ def main():
     tools = os.path.join(dst, "tools")
     os.makedirs(tools, exist_ok=True)
     for f in os.listdir(os.path.join(SKILL, "tools")):
-        if f.endswith((".py", ".sh")) and f != "novy_projekt.py":
+        if f.endswith((".py", ".sh", ".js")) and f != "novy_projekt.py":
             copy(os.path.join(SKILL, "tools", f), os.path.join(tools, f))   # nástroje vždy aktualizovat
             if f.endswith(".sh"):   # skill naklonovaný na Windows (core.autocrlf) má CRLF – Git Bash by skript nespustil
                 p = os.path.join(tools, f)
@@ -136,7 +136,7 @@ def main():
     for d in ("vyrezy", "zdroje", "dokumenty", "pracovni"):
         os.makedirs(os.path.join(dst, d), exist_ok=True)
     os.makedirs(os.path.join(dst, ".claude"), exist_ok=True)
-    for name in ("CLAUDE.md", ".gitignore", ".gitattributes", "poznamky_pro_skill.md", os.path.join(".claude", "launch.json")):
+    for name in ("GEMINI.md", "AGENTS.md", "CLAUDE.md", ".gitignore", ".gitattributes", "poznamky_pro_skill.md", os.path.join(".claude", "launch.json")):
         out = os.path.join(dst, name)
         if not os.path.lexists(out):
             copy(os.path.join(SKILL, "template", name), out)

@@ -2,7 +2,10 @@
 import Base from '../layouts/Base.astro';
 import fan from '../generated/fan.svg?raw';
 import { people } from '../lib/data.js';
-const names = [...new Set(Object.values(people).filter((p) => p.k > 1).map((p) => p.name))].sort((a, b) => a.localeCompare(b, 'cs'));
+const names = [...new Set(Object.values(people).filter((p) => p.direct && p.k > 1).map((p) => p.name))].sort((a, b) => a.localeCompare(b, 'cs'));
+// kartička po najetí / klepnutí: celá data narození, sňatků a úmrtí (do políčka vějíře se vejdou nanejvýš roky)
+const cards = Object.fromEntries(Object.values(people).filter((p) => p.direct)
+  .map((p) => [p.slug, { name: p.name, rel: p.rel, years: p.years, life: p.life ?? [] }]));
 ---
 <Base title="Vějíř předků" full>
   <div class="fan-bar">
@@ -17,9 +20,18 @@ const names = [...new Set(Object.values(people).filter((p) => p.k > 1).map((p) =
       <button type="button" data-z="0.667" aria-label="Oddálit">−</button>
       <button type="button" data-z="0">Celý</button>
     </span>
-    <span class="small muted fan-hint">Kolečkem myši přibližujte, tažením posouvejte, klepnutím na jméno otevřete stránku.</span>
+    <span class="small muted fan-hint">Kolečkem myši přibližujte, tažením posouvejte, najetím na jméno uvidíte data, klepnutím otevřete stránku.</span>
   </div>
-  <div class="fan-stage" set:html={fan} />
+  <div class="fan-stage-wrap">
+    <div class="fan-stage" set:html={fan} />
+    <div class="fan-card" hidden>
+      <button type="button" class="fan-card-close" aria-label="Zavřít">×</button>
+      <strong class="fan-card-name"></strong><div class="small muted fan-card-rel"></div>
+      <dl></dl>
+      <a class="fan-card-link small" href="/">Otevřít stránku →</a>
+    </div>
+  </div>
+  <script type="application/json" id="fan-cards" set:html={JSON.stringify(cards).replace(/</g, '\\u003c')} />
 
   <script>
     const stage = document.querySelector<HTMLElement>('.fan-stage')!;
@@ -68,6 +80,34 @@ const names = [...new Set(Object.values(people).filter((p) => p.k > 1).map((p) =
     stage.addEventListener('pointerup', up);
     stage.addEventListener('pointercancel', up);
     stage.addEventListener('click', (e) => { if (moved > 4) { e.preventDefault(); e.stopPropagation(); } }, true);
+
+    // kartička: myší po najetí, dotykem první klepnutí ukáže kartičku a druhé otevře stránku
+    const cards = JSON.parse(document.getElementById('fan-cards')!.textContent!);
+    const card = document.querySelector<HTMLElement>('.fan-card')!;
+    let shown = '', touch = false;
+    const slugOf = (a: Element) => (a.getAttribute('href') ?? '').match(/\/osoba\/([^/]+)\//)?.[1] ?? '';
+    const show = (slug: string) => {
+      const c = cards[slug];
+      if (!c) return;
+      shown = slug;
+      card.querySelector('.fan-card-name')!.textContent = c.name;
+      card.querySelector('.fan-card-rel')!.textContent = c.rel;
+      card.querySelector('dl')!.innerHTML = c.life.length
+        ? c.life.map((u: { label: string; html: string }) => `<dt>${u.label}</dt><dd>${u.html}</dd>`).join('')
+        : `<dd>${c.years || 'údaje zatím neznáme'}</dd>`;
+      card.querySelector<HTMLAnchorElement>('.fan-card-link')!.href = `/osoba/${slug}/`;
+      card.hidden = false;
+    };
+    stage.addEventListener('pointerdown', (e) => { touch = e.pointerType !== 'mouse'; }, true);
+    svg.addEventListener('pointerover', (e) => {
+      const a = (e.target as Element).closest('.fan-links a');
+      if (a && e.pointerType === 'mouse') show(slugOf(a));
+    });
+    svg.addEventListener('click', (e) => {
+      const a = (e.target as Element).closest('.fan-links a');
+      if (a && touch && slugOf(a) !== shown) { e.preventDefault(); show(slugOf(a)); }
+    });
+    card.querySelector('.fan-card-close')!.addEventListener('click', () => { card.hidden = true; shown = ''; });
 
     document.querySelectorAll<HTMLButtonElement>('.fan-btns button').forEach((b) =>
       b.addEventListener('click', () => { const z = Number(b.dataset.z); if (z) zoomAt(z); else { vb = { ...home }; apply(); } })

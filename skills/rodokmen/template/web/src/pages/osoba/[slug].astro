@@ -12,7 +12,18 @@ export function getStaticPaths() {
 const p = people[Astro.params.slug];
 const line = p.line ? lineByK[p.line] : null;
 const recs = [...new Set(p.records)].filter((r) => records[r]).sort((a, b) => dateKey(records[a].date) - dateKey(records[b].date));
+const ownSet = new Set(p.ownRecords ?? recs);   // starší data bez ownRecords: vše jako vlastní
+const own = recs.filter((r) => ownSet.has(r));
+const mentions = recs.filter((r) => !ownSet.has(r));
+const history = [...(p.history ?? [])].reverse();   // nejnovější nahoře
+const opravy = history.filter((h) => h.kind === 'oprava').length;
+const openQ = (p.questions ?? []).filter((q) => !q.solved);
+const solvedQ = (p.questions ?? []).filter((q) => q.solved);
 const path = [...p.path].reverse().filter(Boolean);
+const storyParas = (p.story || '').split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean)
+  .map((t) => t.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>'));
+const partners = (p.partners || []).map((s) => people[s]).filter(Boolean);
+const kids = (p.children || []).map((s) => people[s]).filter(Boolean);
 ---
 <Base title={p.name} description={`${p.name} ${p.years} – ${p.rel}`}>
   <div class="crumbs">
@@ -25,13 +36,21 @@ const path = [...p.path].reverse().filter(Boolean);
     {line && <a class="chip" href={href.line(line.slug)}><span class="dot" style={`background:${line.color}`}></span>rod {line.name}</a>}
     <span class={`chip ${statusClass(p.st)}`}>{p.status}</span>
   </div>
+  {p.life?.length > 0 && (
+    <dl class="life">{p.life.map((u) => <><dt>{u.label}</dt><dd set:html={u.html} /></>)}</dl>
+  )}
 
   {p.also.length > 0 && (
     <p class="note">V rodokmenu dvakrát – pedigree collapse: je předkem přes {p.children.map((c, i) => <>{i > 0 && ' i přes '}<PersonLink slug={c} /></>)}.
       Podruhé jako {p.also.map((a) => a.rel).join(', ')}.</p>
   )}
-  {p.facts.length > 0 && <ul class="facts">{p.facts.map((f) => <li>{f}</li>)}</ul>}
-  {p.note && <p class="note">{p.note}</p>}
+  {storyParas.length > 0 && (
+    <div class="story">
+      {storyParas.map((t) => <p set:html={t} />)}
+    </div>
+  )}
+  {(p.otherHtml ?? p.factsHtml ?? p.facts).length > 0 && <ul class="facts">{(p.otherHtml ?? p.factsHtml ?? p.facts).map((f) => <li set:html={f} />)}</ul>}
+  {p.note && <p class="note" set:html={p.noteHtml ?? p.note} />}
 
   <h2>Rodina</h2>
   <div class="grid2">
@@ -41,11 +60,12 @@ const path = [...p.path].reverse().filter(Boolean);
         Matka: {p.mother ? <PersonLink slug={p.mother} /> : <span class="muted">zatím neznámá</span>}</p>
       {p.family && <p class="small"><a href={href.family(p.family)}>Rodina, ze které pochází →</a></p>}
     </div>
-    {p.child && (
+    {(p.child || partners.length > 0 || kids.length > 0) && (
       <div class="card">
-        <h3>{p.sex === 'M' ? 'Manželka' : 'Manžel'} a dítě v linii</h3>
-        <p>{p.spouse ? <PersonLink slug={p.spouse} /> : <span class="muted">{p.sex === 'F' && people[p.child]?.fatherUnknown ? 'otec dítěte neuveden' : 'neznámý partner'}</span>}<br />
-          {p.children.length > 1 ? 'Děti' : 'Dítě'}: {p.children.map((c, i) => <>{i > 0 && ', '}<PersonLink slug={c} /></>)}</p>
+        <h3>{p.sex === 'M' ? (partners.length > 1 ? 'Manželky' : 'Manželka') : (partners.length > 1 ? 'Manželé' : 'Manžel')} a děti</h3>
+        <p>{partners.length ? partners.map((s, i) => <>{i > 0 && ', '}<PersonLink slug={s.slug} /></>)
+            : <span class="muted">{p.sex === 'F' && p.child && people[p.child]?.fatherUnknown ? 'otec dítěte neuveden' : 'neznámý partner'}</span>}<br />
+          {kids.length > 0 && <>{kids.length > 1 ? 'Děti' : 'Dítě'}: {kids.map((c, i) => <>{i > 0 && ', '}<PersonLink slug={c.slug} />{c.direct && p.direct && c.slug === p.child ? ' (linie)' : ''}</>)}</>}</p>
         {p.ownFamily && <p class="small"><a href={href.family(p.ownFamily)}>Jejich rodina →</a></p>}
       </div>
     )}
@@ -56,7 +76,7 @@ const path = [...p.path].reverse().filter(Boolean);
       <h2>Příbuzní mimo přímou linii</h2>
       <div class="grid2">
         {p.side.map((s) => (
-          <div class="card"><h3>{s.name}</h3><p class="small">{s.text}</p>
+          <div class="card"><h3>{s.slug ? <a href={href.person(s.slug)}>{people[s.slug]?.name ?? s.name}</a> : s.name}</h3><p class="small">{s.text}</p>
             {s.records.length > 0 && <p class="small">Zápisy: {s.records.filter((r) => records[r]).map((r, i) => <>{i > 0 && ' · '}<a href={href.record(r)}>{records[r].date}</a></>)}</p>}
           </div>
         ))}
@@ -64,9 +84,30 @@ const path = [...p.path].reverse().filter(Boolean);
     </>
   )}
 
-  <h2>Předci</h2>
-  <div class="only-desktop"><Pedigree k={p.k} /></div>
-  <div class="only-mobile"><MobileTree k={p.k} /></div>
+  {openQ.length > 0 && (
+    <>
+      <h2>Co u {p.sex === 'F' ? 'ní' : 'něj'} ještě nevíme</h2>
+      <div class="grid2">
+        {openQ.map((q) => (
+          <div class="card">
+            <h3>{q.title}</h3>
+            <p class="small"><span class={`chip ${q.text.startsWith('Hypotéza') ? 'st-prob' : 'st-unk'}`}>{q.text.startsWith('Hypotéza') ? 'Hypotéza' : 'Otevřené'}</span> {q.text.replace(/^(Otevřené|Otázka|Hypotéza):\s*/, '')}</p>
+          </div>
+        ))}
+      </div>
+      <p class="small"><a href="/hledame/">Všechny otevřené otázky →</a></p>
+    </>
+  )}
+
+  {p.direct ? (
+    <>
+      <h2>Předci</h2>
+      <div class="only-desktop"><Pedigree k={p.k} /></div>
+      <div class="only-mobile"><MobileTree k={p.k} /></div>
+    </>
+  ) : (
+    <p class="small"><a href="/rodokmen/">Zobrazit v rodokmenu (celá rodina) →</a></p>
+  )}
 
   {p.docs.length > 0 && (
     <>
@@ -75,7 +116,50 @@ const path = [...p.path].reverse().filter(Boolean);
     </>
   )}
 
-  <h2>Zápisy z matrik</h2>
-  {recs.length ? <div class="recs">{recs.map((r) => <Record id={r} showPeople exclude={p.slug} />)}</div>
-    : <p class="muted">K této osobě zatím nemáme vlastní matriční zápis – údaje pocházejí ze zápisů jejích dětí{p.st === 'fam' ? ' nebo od rodiny' : ''}.</p>}
+  <h2>{own.length > 0 && own.every((rk) => records[rk]?.kind === 'J')
+    ? 'Historické prameny'
+    : own.some((rk) => ['J', 'S'].includes(records[rk]?.kind))
+    ? 'Zápisy z matrik a další prameny'
+    : 'Zápisy z matrik'}</h2>
+  {own.length ? <div class="recs">{own.map((r) => <Record id={r} showPeople exclude={p.slug} />)}</div>
+    : <p class="muted">Vlastní zápis této osoby (křest, sňatek, úmrtí) zatím nemáme{mentions.length ? ' – údaje pocházejí ze zápisů příbuzných níže' : ''}{p.st === 'fam' ? ' nebo od rodiny' : ''}.</p>}
+  {mentions.length > 0 && (
+    <>
+      <h2>Zmínky v zápisech příbuzných</h2>
+      <p class="small muted">Zápisy o dětech, rodičích nebo sourozencích, ve kterých je {p.name} jmenován{p.sex === 'F' ? 'a' : ''} – třeba jako otec, matka nebo kmotr. Nejsou to {p.sex === 'F' ? 'její' : 'jeho'} vlastní křest ani úmrtí.</p>
+      <div class="recs">{mentions.map((r) => <Record id={r} showPeople exclude={p.slug} />)}</div>
+    </>
+  )}
+
+  {(history.length > 0 || solvedQ.length > 0) && (
+    <details class="historie">
+      <summary><h2>Historie bádání</h2> <span class="small muted">{history.length} {history.length === 1 ? 'záznam' : history.length < 5 ? 'záznamy' : 'záznamů'} z výzkumného deníku{opravy ? ` · ${opravy} ${opravy === 1 ? 'oprava' : opravy < 5 ? 'opravy' : 'oprav'}` : ''}{solvedQ.length ? ` · ${solvedQ.length} ${solvedQ.length === 1 ? 'vyřešená otázka' : 'vyřešené otázky'}` : ''}</span></summary>
+      <p class="small muted">Jak jsme k údajům o této osobě došli – každé hledání, i neúspěšné, a každá oprava dřívějšího čtení. Celý deník: <a href="/denik/">Výzkumný deník</a>.</p>
+      {solvedQ.map((q) => (
+        <div class="h-row"><span class="chip st-doc">Vyřešeno</span> <strong>{q.title}</strong> <span class="small">{q.text.replace(/^Vyřešeno:?\s*/, '')}</span></div>
+      ))}
+      {history.map((h) => (
+        <div class="h-row">
+          <span class={`chip ${h.kind === 'oprava' ? 'st-prob' : h.kind === 'nenalezeno' ? 'st-unk' : 'st-doc'}`}>{h.kind === 'oprava' ? 'Oprava' : h.kind === 'nenalezeno' ? 'Nenalezeno' : 'Nález'}</span>
+          <span class="small muted">{h.date} · č. {h.n} · <span set:html={h.source} /></span>
+          <div class="small"><span set:html={h.searched} /> – <span set:html={h.result} /></div>
+        </div>
+      ))}
+    </details>
+  )}
 </Base>
+
+<style>
+  .historie { margin-top: 1.5rem; }
+  .historie summary { cursor: pointer; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .historie summary h2 { display: inline; margin: 0; }
+  .h-row { border-left: 3px solid var(--line); padding: 0.35rem 0 0.35rem 0.8rem; margin: 0.5rem 0; }
+  .h-row .chip { margin-right: 0.3rem; }
+  .story { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 0.9rem 1.2rem; margin: 1rem 0 1.2rem; font-family: var(--serif); font-size: 1.05rem; line-height: 1.6; }
+  .story p { margin: 0 0 0.6rem; }
+  .story p:last-child { margin-bottom: 0; }
+  .life { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; margin: 0.9rem 0 1rem; padding: 0.75rem 1rem;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+  .life dt { color: var(--muted); font-weight: 600; }
+  .life dd { margin: 0; }
+</style>

@@ -11,6 +11,11 @@ const l = lines[Astro.params.slug];
 const members = l.people.map((s) => ({ ...people[s], gen: l.gens[s] }));
 const gens = [...new Set(members.map((p) => p.gen))].sort((a, b) => a - b);
 const partnerLine = lineByK[l.k ^ 1];
+// Příběh rodu: data/pribehy/<slug>.md → web/src/generated/pribehy/<slug>.md
+const storyModules = import.meta.glob('../../generated/pribehy/*.md', { eager: true });
+const storyMod = storyModules[`../../generated/pribehy/${Astro.params.slug}.md`];
+const Story = storyMod?.Content;
+const storyFm = storyMod?.frontmatter ?? {};
 ---
 <Base title={`Rod ${l.name}`}>
   <p class="crumbs"><a href="/rody/">Rody</a></p>
@@ -23,6 +28,14 @@ const partnerLine = lineByK[l.k ^ 1];
     )}
   </p>
   <p class="small muted">Rodokmen je rozdělený do osmi rodů podle osmi pradědečků a prababiček – každý manželský pár proto patří do dvou sousedních rodů.</p>
+
+  {Story && (
+    <section class="line-story">
+      <h2>{storyFm.title || `Příběh rodu ${l.name}`}</h2>
+      {storyFm.lead && <p class="lead">{storyFm.lead}</p>}
+      <div class="prose"><Story /></div>
+    </section>
+  )}
 
   {gens.map((g) => (
     <>
@@ -52,3 +65,8 @@ const partnerLine = lineByK[l.k ^ 1];
     </>
   ))}
 </Base>
+
+<style>
+  .line-story { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.4rem 1.2rem; margin: 1.2rem 0 1.6rem; }
+  .line-story h2 { margin-top: 0.2rem; }
+</style>

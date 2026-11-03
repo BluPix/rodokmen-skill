@@ -2,12 +2,17 @@
 import Base from '../layouts/Base.astro';
 import PersonLink from '../components/PersonLink.astro';
 import { people, lineByK, genName, statusClass } from '../lib/data.js';
-const list = Object.values(people).sort((a, b) => a.k - b.k);
+const list = Object.values(people).filter((p) => p.direct).sort((a, b) => a.k - b.k);
 const gens = [...new Set(list.map((p) => p.gen))];
 ---
 <Base title="Předci">
   <h1>Všichni předci</h1>
   <p class="lead">Po generacích, v pořadí podle Kekulého čísla (otec má číslo 2n, matka 2n + 1). U každé generace vidíte, kolik předků z možného počtu už známe – ty ostatní teprve hledáme. Podívejte se, <a href="/hledame/">co ještě hledáme</a>, třeba víte víc.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin:1.5rem 0 2.5rem 0;">
+    <a class="btn" href="/rodokmen/">Klasický rodokmen (strom) →</a>
+    <a class="btn" href="/vejir/">Kruhový vějíř předků →</a>
+    <a class="btn" href="/rodokmen.ged" download>⬇ Stáhnout GEDCOM (.ged)</a>
+  </div>
   {gens.map((g) => (
     <>
       <h2>{genName(g)} <span class="muted small">({list.filter((p) => p.gen === g).length} z {2 ** g})</span></h2>

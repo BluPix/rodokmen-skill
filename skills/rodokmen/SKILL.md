@@ -154,6 +154,28 @@ Pravidla, která chrání kvalitu (naučená na skutečném projektu):
 - **Nic nedomýšlej.** Nejisté čtení „(?)“, rozpory zapiš do `ISSUES`. Písaři se pletli (jména sourozenců, věk, Anna/Františka).
 - **Čti celý zápis včetně okrajů** – pozdější poznámky o úmrtí, sňatku, legitimaci bývají nejcennější.
 - **Rodina přes čísla domů**: stejné číslo popisné a řemeslo přes generace je silná stopa; v knize hledej celé domácnosti.
+- **Metoda systematického procházení rok po roku (vyvrácení tradovaných dat a záchytné body):**
+  Když tradiční rodinný pramen (plakát, GEDCOM, Smart Match) selže nebo je datum zjevně chybné, nevzdávej to:
+  1. *Záchytný bod existence:* Hledej nepřímý důkaz, kdy člověk prokazatelně žil (např. v úmrtí manželky je označena jako *uxor* / manželka, nikoliv *vidua* / vdova; zápis v gruntovní knize o předání gruntu; kmotrovství).
+  2. *Věkové a biologické ohraničení:* Odhadni věk v době záchytného bodu (např. v 65 letech má před sebou max. 15–20 let života).
+  3. *Průchod rok po roku po čísle domu:* V malých vsích (kde je jen několik úmrtí ročně) představuje 10–20 let pouhých 15–30 snímků. Projdi je systematicky snímek po snímku s filtrem na obec/číslo domu. Odhalí to dožití na výměnku i druhá manželství.
+- **Pozemkové a majetkové prameny (pozemkové knihy, lánové rejstříky, katastry):**
+  Při bádání v konkrétní vsi nebo při dosažení konce matrik (17.–18. století) vždy nabídni a prověř:
+  `python3 -I tools/pozemky.py hledat "Obec" [--dum CP]`
+  - **Pozemkové a gruntovní knihy** (MZA ARON fond C 17 a velkostatky): `pozemky.py knihy <obec>` – zápisy o koupi/prodeji gruntu, předání synovi, soupisy věna a výminků, vyrovnání sourozenců. Snímky knih lze prohlížet v ARONu nebo stáhnout výřez přes `pozemky.py snimek <id> <n> out.jpg`. Začni `pozemky.py predci <obec>` a postupem v sekci „Jak správně bádat v pozemkových knihách“ níže.
+  - **Lánové rejstříky 1669–1679** (MZA fond D 1): `pozemky.py lanove <obec>` – nejstarší moravský katastr (obdoba české berní ruly), jmenovité soupisy usedlostí často se jménem hospodáře z r. 1657 po třicetileté válce.
+  - **Stabilní katastr a indikační skici (1824–1843)**: `pozemky.py katastr <obec> [--dum CP]` – ČÚZK archiv (císařské otisky) a MZA indikační skici. V indikačních skicách jsou u jednotlivých parcel a domů přímo vepsána jména hospodářů v době zaměření.
+- **Hroby, pomníky a vojenská pietní místa (VETS.cz, hřbitovní správy):**
+  Pro osoby z 19.–20. století (padlí ve válkách, oběti perzekuce, významní předci, hrobová místa rodiny):
+  `python3 -I tools/pieta.py vets hrdina "Příjmení" [--jmeno Jméno]`
+  `python3 -I tools/pieta.py vets misto "Obec" [--okres Okres]`
+  - **VETS.cz (Spolek pro vojenská pietní místa):** doslovné přepisy nápisů na pomnících padlých v 1. i 2. sv. válce, pamětních deskách a čestných hrobech, přesné GPS souřadnice a fotografie (`pieta.py vets foto <id> out.jpg`).
+  - **Hřbitovní databáze a vyhledávače:** `pieta.py hrbitovy <příjmení> [--rok ROK]` vygeneruje přímé vyhledávací odkazy na BillionGraves, Find a Grave a městské správy hřbitovů (Brno, Jihlava, Třebíč, Praha).
+- **Školní a obecní kroniky (MZA ARON / SOkA):**
+  Pro dokreslení lidského příběhu rodu (požáry, neúrody, cholera, výstavba silnic, spory, zápisy starostů, školní docházka a seznamy žáků):
+  `python3 -I tools/kroniky.py hledat "Obec" [--druh obec|skola|vse] [--digitalizovane]`
+  - `kroniky.py info <apu_id>`: inventární popis fondu.
+  - `kroniky.py snimek <apu_id> <n> out.jpg`: přímé stažení snímku digitalizované kroniky v plném rozlišení přes IIPSrv Deepzoom.
 - **Ztotožnění míst ověř** podle panství/kraje v zápisu (německé „Langenau“ je v Čechách několikrát – rozhodne „bey Hohenelbe“ = u Vrchlabí).
 - **U úředníků, vojáků, lékařů, učitelů, farářů** zkus noviny a ročenky (`reference/portaly.md` → Noviny): ukážou
   kariéru, tedy kde člověk kdy žil, a dají výstřižky na web. U sedláků a řemeslníků na vsi se nevyplatí.
@@ -187,8 +209,7 @@ Ať zmíní i zjevně související výskyty (viz krok 6 výše). Výstupy pomoc
 na dvě čitelné poloviny), než ho zapíšeš jako `doc`. Uživateli to vysvětli správně: pomocníci nečtou hůř, je to stejný
 model. Jde o princip čtyř očí a pomocník nemá kontext (dvě rodiny stejného jména ve vsi, dva Janové na statku).
 Prohlížeč může mít najednou jen jeden pomocník, proto dávej přednost nástrojům bez prohlížeče.
-**Pomocníky spouštěj na levnějším modelu** (Agent s `model: "sonnet"`): hledání a první čtení zvládnou a stojí zlomek
-kreditů. Ověření na snímku a zápis do dat dělá hlavní model (ty). Uživateli to řekni, ať ví, proč kredity tolik neubývají.
+**Pomocníky na hledání smíš spouštět na levnějším modelu** (Claude Agent s `model: "sonnet"`, Gemini s `flash_lite` nebo `flash`): procházení knih a nalezení zápisu (svazek, snímek, oddíl, řádek, folio) zvládnou a stojí jen zlomek nákladů. **Přepis celého zápisu levný pomocník nedělá** – v praxi si vymýšlí kněze, kmotry, příčiny smrti, rodiče rodičů i dvojčata, která v zápisu nebyla. Od pomocníka chtěj jen: kde zápis je, výřez z plného rozlišení, co na řádku jistě vidí (jméno, datum, dům) a řádek `nečteno: …`. Přepis, ověření na snímku a zápis do dat dělá hlavní model (ty). Výsledky pomocníka nejdřív prožeň `python3 -I tools/kontrola_vysledku.py <vysledky.md>` (vymyšlená čísla osob, náhledy místo plného rozlišení, výřez z jiné stránky).
 Osvědčilo se 3–4 pomocníci na různé větve a archivy současně, jedno kolo ≈ 15–25 nových předků.
 Pomocníci stojí hodně kreditů – před velkým kolem řekni uživateli, co plánuješ a proč, a nech si to schválit.
 Do zadání jim napiš technické pasti z `reference/matriky.md` (macOS: zsh; Windows: `python -I -X utf8`, `magick`)
@@ -296,4 +317,35 @@ Nedělej to pořád. Postup:
 | `slusne.py <skript.py> / curl … / bash x.sh / stav` | brzda proti zablokování archivem – vlastní skripty a curl spouštěj přes ni |
 | `kontrola.py` | kontrola dat; hlásí i citlivé údaje na webu a kdy psát příběh |
 | `export_web.py` | data → web (volá ho `npm run data`) |
+| `mza.py hledat / fary / knihy / info / snimek` | přímé stahování a vyhledávání z MZA Brno (Acta Publica) bez prohlížeče |
+| `najdi_vyrez.py <stránka.jpg> <výřez.jpg>` | bleskové nalezení polohy výřezu ve velké stránce (OpenCV FFT, 0.5 s; souřadnice 0..1 pro vyrez.py a ramecek.py) |
+| `dum.py "Obec" <čp> [--zapis]` | geokódování konkrétního domu (čp.) pro mapu webu |
+| `kontrola_dat.py` | kontrola nemožných a podezřelých dat, věků a chronologie (chybně přečtené číslice) |
+| `kontrola_vysledku.py <vysledky.md>` | kontrola výsledků pomocníka (vymyšlená `#N`, náhledy, výřez z jiné stránky, chybějící `nečteno:`) |
+| `roky.py [--zapis]` | automatické doplnění a kontrola let života (pole `y`) podle genealogických zvyklostí |
+| `gedcom.py` | export dat do standardního formátu GEDCOM 5.5.1 (pro MyHeritage, Gramps, Ancestry) |
+| `smoke_test.py` | diagnostika dostupnosti všech archivních a online nástrojů |
+| `pozemky.py predci / hledat / knihy / info / rejstrik / snimek / katastr / lanove` | pozemkové a gruntovní knihy v MZA ARON, lánové rejstříky D 1, stabilní katastr a indikační skici |
+| `pieta.py vets hrdina / misto / detail / foto / hrbitovy` | hroby, pomníky a vojenská pietní místa (VETS.cz, městské hřbitovy) |
+| `kroniky.py hledat / info / snimek` | školní a obecní kroniky v MZA ARON (SOkA Jihlava, Třebíč...) |
+| `prameny.py hledat kramerius / vua / cevh`, `fronta navrhni / spustit / vysledky` | noviny, seznamy ztrát 1914–1919, padlí v 1. sv. válce, válečné hroby |
+| `arolsen.py hledat / karta` | Arolsen Archives: nucené nasazení, oběti války a perzekuce |
+| `scitani.py plan / najdi / hlavicky / snimek` | sčítání lidu 1857–1921 (Morava, portál MZA) |
 | `fan_chart.py vystupy/` | vějíř předků jako plakát k tisku |
+
+## Jak správně bádat v pozemkových knihách a gruntovnicích
+Pozemkové knihy obsahují trhové smlouvy (Kaufvertrag / Nowý Zápis), předání usedlostí, vyplacení sourozenců a výminky.
+**Nikdy nestahuj snímek 1 jako „doklad“!** Snímky 1–3 jsou moderní archivní desky nebo úvodní dekrety.
+Správný postup:
+0. **Koho hledám:** `python3 -I tools/pozemky.py predci "Obec"` vypíše, kdo z rodokmenu v obci žil, v kterém domě a kdy. Bez předka v obci kniha rodokmenu nic nedá. Knihu vyber podle obce **domu** předka (ne podle farnosti) a podle let, kdy tam hospodařil.
+1. **Kniha:** Vyhledej knihy pro danou obec (`python3 -I tools/pozemky.py knihy "Obec"`). Zkontroluj časový rozsah a zda má digitalizované snímky online.
+2. **Rejstřík (index):** Stáhni náhledy úvodních snímků knihy (`python3 -I tools/pozemky.py rejstrik <apu_id> [--od 2] [--do 8]`). Staré knihy jsou indexovány podle vsí a uvádějí jména hospodářů a čísla **listů (folií)**, např. *fol. 111*.
+3. **Nalezení folia:** Číslo snímku odpovídá přibližně: *číslo folia + počet listů předsádky/rejstříku*. Většina gruntovnic má gruntu vyhrazen blok 8–10 listů.
+4. **Trhová smlouva / Zápis:** Vyhledej smlouvu, kde předek usedlost kupuje nebo přejímá (`Nowý Zápis`). Stáhni plné rozlišení (`snimek <apu_id> <číslo>`). Přečti a přepiš:
+   - datum a rychtáře / konšely obce,
+   - kupní cenu v rýnských zlatých (fl.), hotovost (závdavek na ruku),
+   - roční splátky a komu se vyplácely (sirotčí podíly předchozího hospodáře, sourozenci),
+   - výminek (*Wýminek*): kolik měřic pole ve kterých tratích, kopy naddělkem, část zahrady, loučka u potoka, naturální dávky,
+   - inventář živnosti: železný vůz, rádlo s železem, brány, nářadí, dobytek.
+5. **Roční splátky (rathunky / kvitance):** Na následujících listech sleduj roční zápisy o splátkách. Ukazují, jak dlouho předek hospodařil a v kterém roce usedlost postoupil další generaci. Srovnej se sňatky a úmrtími v matrice.
+6. **Ztotožnění a zápis:** nález patří předkovi jen při shodě jména, domu a let s fakty z kroku 0 – jinak je to stopa do deníku, ne „doložená kontinuita rodu“. Číslo osoby `#N` piš jen ověřené v `osoby.py`. Zápis druhu `J` s výřezem z plného rozlišení; z náhledů rejstříku (`…_nahled.jpg`) se nic necituje. Kurent 18. století je těžký: nejistá slova „(?)“, nečitelné „[…]“, nic nedoplňovat.

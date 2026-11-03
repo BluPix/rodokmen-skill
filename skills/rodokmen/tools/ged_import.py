@@ -7,6 +7,8 @@ Použití (z kořene projektu):
                                                                         (1 = ona, 2 = otec, 3 = matka…), všechny
                                                                         události, poznámky a FRONTA ZÁPISŮ k vyhledání
   … "Jméno Příjmení" --osoby   -> totéž jako kostra pro data/osoby.py (stav "fam", ke kontrole a doplnění)
+  … "Jméno Příjmení" --porovnej -> porovná strom s data/osoby.py podle Kekulého čísel: ROZPORY (jiné datum či jméno),
+                                  DOPLNĚNÍ (strom má údaj, který my nemáme – stopa k ověření) a předci NAVÍC
 
 Fronta zápisů: u každého předka nejmladší známá událost s místem (úmrtí, pak sňatek, pak narození) –
 úmrtní a oddací zápisy uvádějí datum a místo narození i rodiče, proto se hledá od nejmladšího zápisu.
@@ -14,7 +16,7 @@ E-maily a adresy ze stromu se nevypisují.
 Kódování: UTF-8; starší soubory s hlavičkou „1 CHAR ANSI“ (Brother's Keeper) se čtou jako Windows-1250 a česká data
 („SRPEN 1945“, „PODZIM 1951“, „1926 NEBO 1927“, „11.11.1934“) se převedou na tvar „8. 1945“, „podzim 1951“…
 """
-import datetime, re, sys
+import datetime, os, re, sys
 from collections import defaultdict
 for _s in (sys.stdout, sys.stderr):   # UTF-8 výstup i na Windows bez -X utf8 (cp1250 neumí třeba „→“)
     if hasattr(_s, "reconfigure"):
@@ -148,6 +150,70 @@ def find(recs, query):
     return hits[0]
 
 
+def datum(text):
+    """(den, měsíc, rok) z „14. 2. 1890“, jinak (None, None, rok), jinak None."""
+    m = re.search(r"(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})", text or "")
+    if m:
+        return int(m[1]), int(m[2]), int(m[3])
+    y = year(text)
+    return (None, None, y) if y else None
+
+
+def ukaz(d):
+    return "–" if not d else (f"{d[0]}. {d[1]}. {d[2]}" if d[0] else str(d[2]))
+
+
+def prijmeni(n):
+    w = re.sub(r"\(.*?\)|\{\{[^}]*\}\}", "", n).replace("P. ", "").split()
+    s = w[-1].lower() if w else ""
+    for e in ("ová", "á"):
+        if s.endswith(e) and len(s) > 4:
+            s = s[: -len(e)]
+    return s[:4]
+
+
+def porovnej(tree, recs):
+    """Strom (Kekulé → osoba GEDCOM) proti data/osoby.py: rozpory, doplnění a předci navíc."""
+    data = os.environ.get("RODOKMEN_DATA") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    ns = {}
+    exec(open(os.path.join(data, "osoby.py"), encoding="utf-8").read(), ns)
+    P, SAME = ns.get("P", {}), ns.get("SAME", {})
+    bez = lambda f: re.sub(r"\{\{\s*\w+\s*:?\s*|\s*\}\}", "", f).strip()
+    rozpory, doplneni, navic = [], [], []
+    for k in sorted(tree):
+        ind = tree[k]
+        ev = events(ind, recs)
+        if k in SAME or k not in P:
+            if k not in SAME and P.get(k // 2):   # předek navíc, jehož dítě v rodokmenu máme
+                b = next((d for t, d, p, x in ev if t == "BIRT"), "")
+                navic.append(f"  #{k} {name(ind)} {('* ' + b) if b else ''} – dítě #{k // 2} {P[k // 2]['n']}")
+            continue
+        p, kde = P[k], f"#{k} {P[k]['n']}"
+        if prijmeni(p["n"]) and prijmeni(name(ind)) and prijmeni(p["n"]) != prijmeni(name(ind)):
+            rozpory.append(f"  {kde}: jméno – my „{p['n']}“, strom „{name(ind)}“")
+        nase = [bez(f) for f in p.get("f", [])]
+        for tag, znak, co in (("BIRT", "*", "narození"), ("DEAT", "†", "úmrtí")):
+            jejich = next(((d, pl) for t, d, pl, x in ev if t == tag and (d or pl)), None)
+            my = next((f for f in nase if f.startswith(znak)), None)
+            if not jejich:
+                continue
+            a, b = datum(my), datum(jejich[0])
+            misto = f" {jejich[1]}" if jejich[1] else ""
+            if a and b and (a[2] != b[2] or (a[0] and b[0] and a[:2] != b[:2])):
+                rozpory.append(f"  {kde}: {co} – my {ukaz(a)} ({p.get('st', '?')}), strom {ukaz(b)}{misto}")
+            elif b and (not a or (b[0] and not a[0])):
+                doplneni.append(f"  {kde}: {co} {ukaz(b)}{misto}" + (f" (my jen {ukaz(a)})" if a else ""))
+        nase_sn = {datum(f) for f in nase if f.startswith("×")}
+        for t, d, pl, partner in ev:
+            if t == "MARR" and datum(d) and datum(d) not in nase_sn and datum(d)[2] not in {x[2] for x in nase_sn if x}:
+                doplneni.append(f"  {kde}: sňatek {ukaz(datum(d))} {pl} s {partner}".rstrip())
+    for nadpis, radky in (("ROZPORY – ověřit na snímku zápisu (strom bývá chybný, ale i naše první čtení bylo)", rozpory),
+                          ("DOPLNĚNÍ ZE STROMU – stopy k ověření v matrice; do dat jen se značkou {{strom: …}}", doplneni),
+                          ("PŘEDCI NAVÍC VE STROMU – kandidáti na další generaci (ověřit v zápisech dětí)", navic)):
+        print(f"\n{nadpis}: {len(radky)}")
+        print("\n".join(radky) if radky else "  –")
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -169,6 +235,9 @@ def main():
             if p:
                 tree[kk] = p
                 todo.append(kk)
+    if "--porovnej" in sys.argv:
+        porovnej(tree, recs)
+        return
     queue = []
     if as_py:
         print("P = {")

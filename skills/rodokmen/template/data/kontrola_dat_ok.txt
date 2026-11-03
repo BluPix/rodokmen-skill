@@ -1,0 +1,2 @@
+# Povolené výjimky pro tools/kontrola_dat.py ve formátu:
+# začátek hlášení | proč je to v pořádku (např. matrika ověřena znovu, písař se spletl)

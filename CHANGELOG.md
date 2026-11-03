@@ -6,6 +6,22 @@ dá v repozitáři **Watch → Custom → Releases**.
 
 Projekt založený starší verzí Claude sám nabídne aktualizovat (pozná to podle souboru `VERZE`).
 
+## 0.7.0 – 3. 11. 2026
+
+Nové nástroje pro mimomatriční prameny, interaktivní rodokmen, sčítání lidu a kontrolní pojistky.
+
+**Nové**
+- **Mimomatriční prameny:** fulltextové hledání v digitálních knihovnách Kramerius, databázi padlých v 1. sv. válce VÚA, Centrální evidenci válečných hrobů CEVH a noční fronta dotazů (`tools/prameny.py`).
+- **Arolsen Archives & Matricula:** vyhledávání nuceně nasazených a obětí války (`tools/arolsen.py`) a podpora pro portál Matricula (`tools/matricula.py`).
+- **Sčítání lidu:** modul pro plánování a vytěžování sčítacích operátů 1857–1921 (`tools/scitani.py`) a doplňkový skill `skills/scitani/`.
+- **Pozemkové knihy:** vyhledávání osob z rodokmenu v obci (`tools/pozemky.py predci`) a rychlé náhledy rejstříků (`pozemky.py rejstrik`).
+- **Pojistky kvality:** kontrola chronologie a podezřelých dat (`tools/kontrola_dat.py`), ověřování výsledků pomocníků proti halucinacím (`tools/kontrola_vysledku.py`).
+- **Geokódování domů:** vyhledání souřadnic konkrétního čp. pro mapu (`tools/dum.py`).
+- **Rychlé hledání výřezu:** lokalizace polohy výřezu ve velkém snímku pomocí FFT za 0,5 s (`tools/najdi_vyrez.py`).
+- **Export GEDCOM:** generování standardního GEDCOM 5.5.1 souboru z dat projektu (`tools/gedcom.py`).
+- **Web:** nová stránka interaktivního rodokmenu s přepínáním přímé linie a celé rodiny (`rodokmen.astro`), zoomování kolečkem, podpora pro až 14 prstenců vějíře.
+- **Multi-agentní podpora:** šablony `AGENTS.md` a `GEMINI.md` pro Gemini a Antigravity se striktními pravidly proti vymýšlení pomocníků.
+
 ## 0.6.3 – 3. 11. 2026
 
 Opravy po hlášeních z praxe.

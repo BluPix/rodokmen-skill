@@ -89,8 +89,8 @@ th { font-weight: 600; color: #5a4632; background: #f6f0e6; }
 .fan-wrap { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: auto; max-height: 92vh; }
 .fan-inner { width: 100%; margin: 0 auto; transition: width 0.2s; }
 .fan-inner svg { display: block; width: 100%; height: auto; }
-.fan-links a path, .fan-links a circle { fill: transparent; cursor: pointer; }
-.fan-links a:hover path, .fan-links a:hover circle { fill: rgba(255, 255, 255, 0.35); stroke: #3b2e22; stroke-width: 3; }
+.fan-links a path, .fan-links a circle, .fan-links a rect, .fan-links a polygon { fill: transparent; cursor: pointer; }
+.fan-links a:hover path, .fan-links a:hover circle, .fan-links a:hover rect, .fan-links a:hover polygon { fill: rgba(255, 255, 255, 0.35); stroke: #3b2e22; stroke-width: 3; }
 .fan-tools { position: sticky; top: 0.5rem; left: 0.5rem; z-index: 2; display: inline-flex; gap: 0.3rem; margin: 0.5rem; }
 .fan-tools button { font: inherit; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 0.2rem 0.65rem; cursor: pointer; }
 
@@ -149,7 +149,14 @@ main.full { max-width: none; padding: 0; }
 .fan-stage { height: calc(100vh - 110px); overflow: hidden; touch-action: none; cursor: grab; background: var(--bg); }
 .fan-stage:active { cursor: grabbing; }
 .fan-stage svg { width: 100%; height: 100%; display: block; }
-.fan-links a.hit path, .fan-links a.hit circle { fill: rgba(255, 214, 0, 0.5); stroke: #d7302a; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.fan-stage-wrap { position: relative; }
+.fan-card { position: absolute; left: 1rem; bottom: 1rem; z-index: 3; width: min(23rem, calc(100% - 2rem)); background: var(--paper);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 0.7rem 2rem 0.7rem 0.9rem; box-shadow: 0 4px 16px rgba(43, 38, 32, 0.15); }
+.fan-card dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.8rem; margin: 0.45rem 0; }
+.fan-card dt { color: var(--muted); font-weight: 600; }
+.fan-card dd { margin: 0; }
+.fan-card-close { position: absolute; top: 0.3rem; right: 0.4rem; border: 0; background: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--muted); }
+.fan-links a.hit path, .fan-links a.hit circle, .fan-links a.hit rect, .fan-links a.hit polygon { fill: rgba(255, 214, 0, 0.5); stroke: #d7302a; stroke-width: 3; vector-effect: non-scaling-stroke; }
 @media (max-width: 760px) { .fan-hint { display: none; } .fan-stage { height: calc(100vh - 150px); } }
 
 /* home teaser */
@@ -206,3 +213,17 @@ main.full { max-width: none; padding: 0; }
 .card-link::after { content: '→'; position: absolute; top: 0.7rem; right: 0.9rem; font-size: 1.15rem; color: var(--accent); opacity: 0.55; transition: opacity 0.15s, transform 0.15s; }
 .card-link:hover::after { opacity: 1; transform: translateX(3px); }
 .card-link h3 { padding-right: 1.4rem; }
+
+/* ikonka za jménem osoby v textech → stránka osoby (vkládá tools/export_web.py) */
+.olink { display: inline-block; vertical-align: baseline; margin-left: 0.15em; color: var(--accent); line-height: 1; text-decoration: none; opacity: 0.85; }
+.olink:hover { opacity: 1; transform: translateY(-1px); }
+.olink svg { width: 0.8em; height: 0.8em; }
+
+/* značky neověřených tvrzení ({{neověřeno: …}} apod. v datech, převádí tools/export_web.py) */
+.zn { border-bottom: 2px dotted #c9a24a; }
+.zn-badge { font-size: 0.62em; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; margin-left: 0.25em; padding: 0.05em 0.4em; border-radius: 999px; vertical-align: super; line-height: 1; white-space: nowrap; }
+.zn-neovereno > .zn-badge, sup.zn-badge, .zn-chip.zn-neovereno { background: #fbe9c6; color: #7a4e00; }
+.zn-rodina > .zn-badge, .zn-chip.zn-rodina { background: #e6eef6; color: #284c6e; }
+.zn-strom > .zn-badge, .zn-chip.zn-strom { background: #ececec; color: #555; }
+.zn-hypoteza > .zn-badge, .zn-chip.zn-hypoteza { background: #ece4f5; color: #553a7a; }
+.zn-rodina { border-bottom-color: #9db7d1; } .zn-strom { border-bottom-color: #bbb; } .zn-hypoteza { border-bottom-color: #b9a2d6; }

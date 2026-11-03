@@ -2,13 +2,19 @@
 import site from '../data/site.json';
 
 export const { people, families, lines, stats, issues, hypotheses, docs, config } = site;
+/** Uzly stromu (přímí předci i širší rodina) pro stránku rodokmenu. */
+export const tree = site.tree ?? [];
+/** Označená neověřená tvrzení ({{neověřeno: …}} v datech) – pro stránku „Co hledáme“. */
+export const claims = site.claims ?? [];
+/** „Rodokmen v číslech“ – spočítané z dat při exportu. */
+export const figures = site.figures ?? [];
 /** Počet rodů slovem pro nadpisy („Osm rodů“). */
 export const linesTitle = (n) => (['Žádný rod', 'Jeden rod', 'Dva rody', 'Tři rody', 'Čtyři rody', 'Pět rodů', 'Šest rodů', 'Sedm rodů', 'Osm rodů'][n] ?? `${n} rodů`);
 export const root = people[site.root];
 export const records = Object.fromEntries(site.records.map((r) => [r.key, r]));
 export const recordList = site.records;
 export const byK = Object.fromEntries([
-  ...Object.values(people).map((p) => [p.k, p]),
+  ...Object.values(people).filter((p) => p.k).map((p) => [p.k, p]),
   ...Object.entries(site.aliases ?? {}).map(([k, slug]) => [Number(k), people[slug]]),
 ]);
 export const lineByK = Object.fromEntries(Object.values(lines).map((l) => [l.k, l]));

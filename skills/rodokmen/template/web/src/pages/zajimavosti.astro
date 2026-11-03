@@ -1,12 +1,34 @@
 ---
 import Base from '../layouts/Base.astro';
 import { Content } from '../generated/zajimavosti.md';
-import { lines, linesTitle } from '../lib/data.js';
+import { lines, linesTitle, figures, people, href } from '../lib/data.js';
+const personStories = Object.values(people).filter((p) => p.story).sort((a, b) => (a.k ?? 1e9) - (b.k ?? 1e9));
 ---
 <Base title="Zajímavosti">
   <h1>Zajímavosti z rodokmenu</h1>
   <p class="lead">Co nás při hledání nejvíc překvapilo – nejstarší předek, spojené větve, řemesla a osudy.</p>
   <div class="prose"><Content /></div>
+
+  {personStories.length > 0 && (
+    <>
+      <h2>Příběhy lidí</h2>
+      <p class="small muted">Co o jednotlivých předcích vyprávějí matriční zápisy – každý má svůj příběh na vlastní stránce.</p>
+      <div class="grid2">
+        {personStories.map((p) => <a class="card card-link" href={href.person(p.slug)}><h3>{p.name} <span class="small muted">{p.years}</span></h3><p class="small">{p.storyExcerpt}</p><span class="more-link">Celý příběh →</span></a>)}
+      </div>
+    </>
+  )}
+  {figures.length > 0 && (
+    <>
+      <h2>Rodokmen v číslech</h2>
+      <p class="small muted">Spočítáno přímo z doložených údajů – mění se s každým novým zápisem.</p>
+      <div class="table-box"><table>
+        <tbody>
+          {figures.map((f) => <tr><th class="small">{f.label}</th><td class="small">{f.slug ? <a href={href.person(f.slug)}>{f.value}</a> : f.value}</td></tr>)}
+        </tbody>
+      </table></div>
+    </>
+  )}
 
   <div class="next-step">
     <p><strong>Ponořte se hlouběji:</strong> projděte si jednotlivé rody, podívejte se na mapě, kde předci žili, nebo najděte kohokoli ve vějíři všech předků.</p>

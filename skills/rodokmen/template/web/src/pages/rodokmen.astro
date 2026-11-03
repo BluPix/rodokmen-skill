@@ -1,0 +1,411 @@
+---
+// Rodokmen shora dolů: nejstarší generace nahoře, výchozí osoba dole.
+// Přepínač: „Přímá linie“ (jen předci) / „Celá rodina“ (i sourozenci předků a jejich potomci – širší rodina z osoby.py SIDE).
+// Rozložení počítá prohlížeč ze site.tree (viz tools/export_web.py), takže se nic neruční nekreslí.
+import Base from '../layouts/Base.astro';
+import { people, tree, stats, root } from '../lib/data.js';
+
+const names = [...new Set(Object.values(people).map((p) => p.name))].sort((a, b) => a.localeCompare(b, 'cs'));
+const relatives = tree.filter((n) => !n.direct).length;
+---
+
+<Base title="Rodokmen" full>
+  <div class="tree-topbar">
+    <div class="topbar-left">
+      <h1 class="tree-title">Rodokmen</h1>
+      <span class="tree-meta" id="tree-meta">Předci {root.name} · {stats.ancestors} předků · {stats.generations} generací{relatives > 0 && ` · širší rodina ${relatives} osob`}</span>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="btn-group mode-switch" role="group" aria-label="Rozsah stromu">
+        <button type="button" class="ctrl-btn mode-btn" data-mode="direct">Přímá linie</button>
+        <button type="button" class="ctrl-btn mode-btn" data-mode="all" title="I sourozenci předků a jejich potomci">Celá rodina</button>
+      </div>
+
+      <form class="tree-search" autocomplete="off" onsubmit="return false;">
+        <input id="tree-search-input" list="tree-names" placeholder="Najít osobu…" aria-label="Najít osobu" />
+        <datalist id="tree-names">{names.map((n) => <option value={n} />)}</datalist>
+      </form>
+
+      <div class="btn-group">
+        <button type="button" class="ctrl-btn" id="btn-zoom-in" title="Přiblížit">+</button>
+        <button type="button" class="ctrl-btn" id="btn-zoom-out" title="Oddálit">−</button>
+        <button type="button" class="ctrl-btn" id="btn-zoom-fit" title="Celý strom na šířku">Vše</button>
+        <button type="button" class="ctrl-btn" id="btn-zoom-root" title="Na výchozí osobu">Já</button>
+      </div>
+
+      <a href="/rodokmen.ged" download class="gedcom-download-btn" title="Stáhnout rodokmen ve formátu GEDCOM 5.5.1">⬇ GEDCOM</a>
+
+      <div class="view-switch">
+        <a href="/vejir/" class="switch-link">Vějíř</a>
+        <a href="/predci/" class="switch-link">Seznam</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="tree-viewport" id="tree-viewport">
+    <div class="tree-sizer" id="tree-sizer">
+      <div class="tree-stage" id="tree-stage">
+        <svg class="tree-lines-svg" id="tree-lines-svg"></svg>
+        <div class="tree-rows" id="tree-rows"></div>
+        <div class="tree-nodes" id="tree-nodes"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tree-bottom-help">
+    <div class="help-box">
+      <strong>Jak strom procházet:</strong>
+      <span>Nejstarší předci jsou nahoře, vy dole. Tažením myší posouvejte, kolečkem myši přibližujte a oddalujte (k místu pod kurzorem), kliknutím na jméno otevřete stránku osoby.
+        „Celá rodina“ přidá sourozence předků a jejich potomky – větve, které vedou mimo přímou linii.</span>
+    </div>
+    <div class="legend-box">
+      <span class="leg-item"><span class="dot st-doc"></span> doloženo matrikou</span>
+      <span class="leg-item"><span class="dot st-fam"></span> od rodiny</span>
+      <span class="leg-item"><span class="dot st-rel"></span> širší rodina (mimo přímou linii)</span>
+      <span class="leg-item"><span class="dot st-story"></span> má příběh</span>
+    </div>
+  </div>
+
+  <style is:global>
+    /* is:global: karty stromu vkládá skript, Astro by jim jinak své „scoped“ styly nedal */
+    .tree-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem 1.2rem;
+      padding: 0.7rem 1.4rem; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 100; }
+    .tree-title { font-size: 1.4rem; margin: 0; color: #3b2e22; font-family: var(--serif); }
+    .tree-meta { font-size: 0.85rem; color: var(--muted); display: block; }
+    .topbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+    .tree-search input { font: inherit; font-size: 0.88rem; padding: 0.4rem 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: #faf8f5; width: 170px; }
+    .tree-search input:focus { outline: 2px solid var(--accent); background: #fff; }
+    .btn-group { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+    .ctrl-btn { border: none; background: transparent; padding: 0.35rem 0.7rem; font: inherit; font-size: 0.88rem; cursor: pointer; color: #3b2e22; border-right: 1px solid var(--line); }
+    .ctrl-btn:last-child { border-right: none; }
+    .ctrl-btn:hover { background: #f3ece0; }
+    .mode-btn.is-active { background: var(--accent); color: #fff; }
+    .gedcom-download-btn { display: inline-flex; align-items: center; background: #8a5a2b; color: #fff !important; font-size: 0.85rem; font-weight: 600;
+      padding: 0.42rem 0.8rem; border-radius: 6px; text-decoration: none; }
+    .gedcom-download-btn:hover { background: #6e441c; }
+    .view-switch { display: inline-flex; gap: 0.3rem; border-left: 1px solid var(--line); padding-left: 0.8rem; }
+    .switch-link { font-size: 0.85rem; padding: 0.35rem 0.65rem; border-radius: 6px; background: #f4eee3; color: #5a4632; text-decoration: none; }
+    .switch-link:hover { background: #e6dcce; }
+
+    .tree-viewport { width: 100%; height: calc(100vh - 175px); overflow: auto; background: #f8f5ee; cursor: grab; user-select: none; position: relative; }
+    .tree-viewport.is-dragging { cursor: grabbing; }
+    .tree-sizer { position: relative; }   /* má rozměr zmenšeného stromu, aby posuvníky odpovídaly zoomu */
+    .tree-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+    .tree-lines-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: visible; }
+    .tree-rows { position: absolute; top: 0; left: 0; z-index: 0; }
+    .tree-row { position: absolute; left: 0; right: 0; border-top: 1px dashed #e7dfd0; }
+    .tree-row-label { position: absolute; left: 10px; top: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #a0927f; font-weight: 600; white-space: nowrap; }
+    .tree-nodes { position: absolute; top: 0; left: 0; z-index: 2; }
+
+    .tree-card { position: absolute; box-sizing: border-box; width: 210px; height: 118px; overflow: hidden; background: #fff; border: 1px solid var(--line);
+      border-left: 4px solid #8a8278; border-radius: 10px; padding: 0.55rem 0.7rem; box-shadow: 0 3px 8px rgba(59,46,34,0.06); transition: box-shadow 0.15s, border-color 0.15s; }
+    .tree-card.st-doc { border-left-color: #3f7d4a; }
+    .tree-card.st-fam { border-left-color: #3e6488; }
+    .tree-card.st-prob { border-left-color: #b07a1e; }
+    .tree-card.is-relative { border-style: dashed; border-left-style: solid; background: #fffdf8; }
+    .tree-card.is-root { border: 2px solid #8a5a2b; border-left: 6px solid #8a5a2b; background: #fffdf9; }
+    .tree-card:hover { box-shadow: 0 6px 16px rgba(59,46,34,0.14); border-color: #cdbfa8; }
+    .tree-card.is-hit { outline: 3px solid #e0952f; }
+    .card-bar { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; margin-bottom: 0.15rem; color: var(--muted); gap: 0.3rem; }
+    .card-k { font-weight: 600; }
+    .card-line { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name { display: block; font-size: 0.95rem; font-weight: 600; color: #2b2620; text-decoration: none; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name:hover { color: var(--accent); text-decoration: underline; }
+    .card-years { font-size: 0.82rem; color: var(--muted); }
+    .card-place, .card-partner { font-size: 0.74rem; color: #554839; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.15rem; }
+    .card-partner { color: #6e6153; }
+    .card-partner a { color: inherit; }
+    .card-rel { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.15rem; }
+    .story-mark { color: #b07a1e; font-size: 0.8rem; margin-left: 0.25rem; }
+
+    .tree-bottom-help { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.8rem 1.5rem; padding: 0.7rem 1.4rem;
+      background: #fff; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
+    .help-box { max-width: 52rem; }
+    .help-box strong { color: #3b2e22; margin-right: 0.4rem; }
+    .legend-box { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+    .leg-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .dot.st-doc { background: #3f7d4a; }
+    .dot.st-fam { background: #3e6488; }
+    .dot.st-rel { background: #fffdf8; border: 1px dashed #8a8278; }
+    .dot.st-story { background: #b07a1e; }
+    @media (max-width: 700px) { .tree-viewport { height: calc(100vh - 230px); } }
+  </style>
+
+  <script>
+    import { tree, lineByK, root as rootPerson } from '../lib/data.js';
+
+    const CARD_W = 210, CARD_H = 118, GAP_X = 26, GAP_Y = 74, PAD = 40, LABEL_W = 0;
+    const ROW_H = CARD_H + GAP_Y;
+    const viewport = document.getElementById('tree-viewport');
+    const stage = document.getElementById('tree-stage');
+    const sizer = document.getElementById('tree-sizer');
+    const svg = document.getElementById('tree-lines-svg');
+    const nodesEl = document.getElementById('tree-nodes');
+    const rowsEl = document.getElementById('tree-rows');
+    const byId = Object.fromEntries(tree.map((n) => [n.slug, n]));
+    const rootSlug = rootPerson.slug;
+    const genWord = (g) => ['výchozí osoba', 'rodiče', 'prarodiče', 'praprarodiče'][g] ?? `${'pra'.repeat(g - 1)}rodiče (${g}. gen.)`;
+
+    let mode = 'direct';
+    try { mode = localStorage.getItem('rodokmen-mode') === 'all' ? 'all' : 'direct'; } catch (e) { /* bez paměti */ }
+    let scale = 1;
+    let layout = null;
+
+    const visible = (n) => mode === 'all' || n.direct;
+    const kidsOf = (n) => n.children.map((s) => byId[s]).filter((c) => c && visible(c));
+
+    // --- rozložení -------------------------------------------------------
+    // Blok = karty s relativní polohou x + obrys (pro každou generaci nejlevější a nejpravější okraj).
+    // Bloky se k sobě přisouvají podle obrysu jako puzzle, takže krátká větev nezabírá místo v řádcích, kde nic nemá.
+    function mkBlock(items) {
+      const b = { items, l: new Map(), r: new Map() };
+      for (const it of items) {
+        b.l.set(it.gen, Math.min(b.l.get(it.gen) ?? Infinity, it.x));
+        b.r.set(it.gen, Math.max(b.r.get(it.gen) ?? -Infinity, it.x + CARD_W));
+      }
+      return b;
+    }
+    const merge = (...parts) => mkBlock(parts.filter(([b]) => b).flatMap(([b, dx]) => b.items.map((it) => ({ ...it, x: it.x + dx }))));
+    const leftOf = (b) => Math.min(...b.l.values());
+    const rightOf = (b) => Math.max(...b.r.values());
+    // nejmenší posun bloku b, aby v každé společné generaci ležel vpravo od a (−∞ = nemají společný řádek)
+    function minOffset(a, b) {
+      let off = -Infinity;
+      for (const [g, r] of a.r) if (b.l.has(g)) off = Math.max(off, r + GAP_X - b.l.get(g));
+      return off;
+    }
+    // největší posun bloku b, aby ležel vlevo od bloku c posunutého o cOff
+    function maxOffset(b, c, cOff) {
+      let off = Infinity;
+      for (const [g, l] of c.l) if (b.r.has(g)) off = Math.min(off, cOff + l - GAP_X - b.r.get(g));
+      return off;
+    }
+    function packRow(blocks) {
+      let acc = null;
+      for (const b of blocks) {
+        if (!acc) { acc = b; continue; }
+        let off = minOffset(acc, b);
+        off = off === -Infinity ? rightOf(acc) + GAP_X - leftOf(b) : Math.max(off, leftOf(acc) - leftOf(b));
+        acc = merge([acc, 0], [b, off]);
+      }
+      return acc;
+    }
+
+    let claimed = new Set();
+    const take = (n) => (n && visible(n) && !claimed.has(n.slug) ? (claimed.add(n.slug), n) : null);
+    const xOf = (b, slug) => b.items.find((it) => it.slug === slug).x;
+    // partneři mimo přímou linii (druhé sňatky, manželé sourozenců) – stojí hned vedle své osoby
+    const extraPartners = (n) => (n.partners || []).map((s) => byId[s]).filter((p) => p && !p.direct).map(take).filter(Boolean);
+
+    // Blok předka: nahoře bloky otce a matky, pod nimi „dětský řádek“ – předek, jeho partneři a sourozenci (celá rodina).
+    function ancestorBlock(n) {
+      take(n);
+      const fa = n.father && byId[n.father], mo = n.mother && byId[n.mother];
+      const F = fa && visible(fa) && !claimed.has(fa.slug) ? ancestorBlock(fa) : null;
+      const M = mo && visible(mo) && !claimed.has(mo.slug) ? ancestorBlock(mo) : null;
+      const sibs = [];
+      if (mode === 'all') {
+        for (const p of [fa, mo]) if (p) for (const c of kidsOf(p)) if (!c.direct && take(c)) sibs.push(c);
+        sibs.sort((a, b) => year(a) - year(b));
+      }
+      const partners = extraPartners(n);
+      const leftSide = n.sex === 'M' && n.gen > 0;   // otec má další partnerky vlevo, matka další partnery vpravo
+      const me = [...(leftSide ? partners : []), n, ...(leftSide ? [] : partners)];
+      const meBlock = mkBlock(me.map((p, i) => ({ slug: p.slug, gen: p.gen, x: i * (CARD_W + GAP_X) })));
+      const G = packRow([
+        ...sibs.filter((s) => year(s) <= year(n)).map(descBlock), meBlock, ...sibs.filter((s) => year(s) > year(n)).map(descBlock),
+      ]);
+      if (!F && !M) return G;
+      // rodiče co nejblíž k sobě, dětský řádek pod ně doprostřed – ale tak, aby nenarazil na bratrance pod nimi
+      let mOff = 0;
+      if (F && M) { mOff = minOffset(F, M); if (mOff === -Infinity) mOff = rightOf(F) + GAP_X - leftOf(M); }
+      const lo = F ? minOffset(F, G) : -Infinity;
+      let hi = M ? maxOffset(G, M, mOff) : Infinity;
+      if (lo > hi) { mOff += lo - hi; hi = lo; }
+      const centers = [F && xOf(F, fa.slug), M && xOf(M, mo.slug) + mOff].filter((x) => x != null);
+      const want = centers.reduce((a, b) => a + b, 0) / centers.length - xOf(G, n.slug);
+      const gOff = Math.min(hi, Math.max(lo, want));
+      return merge([F, 0], [M, mOff], [G, gOff]);
+    }
+    // Blok příbuzného mimo linii: on a jeho partneři v řádku, děti pod nimi.
+    function descBlock(n) {
+      take(n);
+      const top = [n];
+      for (let i = 0; i < top.length; i++) top.push(...extraPartners(top[i]));
+      const topBlock = mkBlock(top.map((p, i) => ({ slug: p.slug, gen: p.gen, x: i * (CARD_W + GAP_X) })));
+      const kids = top.flatMap(kidsOf).filter((c) => !c.direct && take(c)).sort((a, b) => year(a) - year(b));
+      if (!kids.length) return topBlock;
+      const K = packRow(kids.map(descBlock));
+      const off = (leftOf(topBlock) + rightOf(topBlock)) / 2 - (leftOf(K) + rightOf(K)) / 2;
+      return merge([topBlock, 0], [K, off]);
+    }
+    function year(n) { const m = (n.years || '').match(/\d{4}/); return m ? Number(m[0]) : 9999; }
+    let maxGen = 0, minGen = 0, looseY = null;
+    function rowY(gen) { return PAD + (maxGen - gen) * ROW_H; }
+
+    function computeLayout() {
+      claimed = new Set();
+      const main = ancestorBlock(byId[rootSlug]);
+      maxGen = Math.max(...main.items.map((it) => it.gen));
+      minGen = Math.min(...main.items.map((it) => it.gen));
+      const dx = PAD - leftOf(main);
+      const pos = {};
+      for (const it of main.items) pos[it.slug] = { x: it.x + dx, y: rowY(it.gen) };
+      let width = rightOf(main) + dx + PAD;
+      let bottom = rowY(Math.min(minGen, 0)) + CARD_H;
+      // příbuzní bez vazby na nikoho ve stromu (známe je jen z poznámky u předka) – zvláštní pruh dole, ne rozházení mezi generacemi
+      const loose = tree.filter((n) => visible(n) && !claimed.has(n.slug)).sort((a, b) => b.gen - a.gen || year(a) - year(b));
+      looseY = null;
+      if (loose.length) {
+        const blocks = [];
+        for (const n of loose) {
+          if (claimed.has(n.slug)) continue;
+          const b = descBlock(n);
+          const topGen = Math.max(...b.items.map((it) => it.gen));
+          blocks.push(mkBlock(b.items.map((it) => ({ ...it, row: topGen - it.gen, gen: it.gen - topGen }))));
+        }
+        const band = packRow(blocks);
+        looseY = bottom + GAP_Y + 28;
+        const bdx = PAD - leftOf(band);
+        for (const it of band.items) pos[it.slug] = { x: it.x + bdx, y: looseY + it.row * ROW_H };
+        width = Math.max(width, rightOf(band) + bdx + PAD);
+        bottom = Math.max(...band.items.map((it) => looseY + it.row * ROW_H)) + CARD_H;
+      }
+      return { pos, width, height: bottom + PAD };
+    }
+
+    // --- vykreslení ------------------------------------------------------
+    function cardHtml(n, p) {
+      const line = n.line && lineByK[n.line] ? lineByK[n.line] : null;
+      const st = n.st === 'doc' ? 'st-doc' : n.st === 'fam' ? 'st-fam' : n.st === 'prob' ? 'st-prob' : 'st-unk';
+      const partners = (n.partners || []).map((s) => byId[s]).filter((x) => x && !x.direct);
+      const partnerHtml = !n.direct && partners.length
+        ? `<div class="card-partner">∞ ${partners.map((x) => `<a href="/osoba/${x.slug}/">${x.name}</a>`).join(', ')}</div>` : '';
+      const placeHtml = n.place ? `<div class="card-place" title="${n.place}">${n.place}</div>` : '';
+      const relHtml = !n.direct ? `<div class="card-rel">${n.rel.split(' · ')[0]}</div>` : '';
+      return `<div class="tree-card ${st} ${n.direct ? '' : 'is-relative'} ${n.slug === rootSlug ? 'is-root' : ''}" id="card-${n.slug}" data-slug="${n.slug}"
+          style="left:${p.x}px;top:${p.y}px;${line ? `--line-color:${line.color}` : ''}">
+        <div class="card-bar"><span class="card-k">${n.direct ? '#' + n.k : (n.sex === 'M' ? '♂' : '♀')}</span>
+          ${line ? `<span class="card-line" style="color:${line.color}">● ${line.name}</span>` : ''}</div>
+        <a href="/osoba/${n.slug}/" class="card-name" title="${n.name}">${n.name}${n.story ? '<span class="story-mark" title="má příběh">✎</span>' : ''}</a>
+        <div class="card-years">${n.years || ''}</div>
+        ${placeHtml}${partnerHtml}${relHtml}
+      </div>`;
+    }
+
+    function render() {
+      layout = computeLayout();
+      const { pos, width, height } = layout;
+      stage.style.width = width + 'px';
+      stage.style.height = height + 'px';
+      svg.setAttribute('width', width); svg.setAttribute('height', height);
+      // řádky generací
+      let rows = '';
+      for (let g = maxGen; g >= Math.min(minGen, 0); g--) {
+        rows += `<div class="tree-row" style="top:${rowY(g) - GAP_Y / 2}px;width:${width}px"><span class="tree-row-label">${g >= 0 ? genWord(g) : `potomci (${-g}. gen. po výchozí osobě)`}</span></div>`;
+      }
+      if (looseY != null) rows += `<div class="tree-row" style="top:${looseY - GAP_Y / 2}px;width:${width}px"><span class="tree-row-label">Příbuzní, kteří zatím nemají ve stromu přesné místo (známe je z poznámek u předků)</span></div>`;
+      rowsEl.innerHTML = rows;
+      nodesEl.innerHTML = tree.filter((n) => pos[n.slug]).map((n) => cardHtml(n, pos[n.slug])).join('');
+      // spojnice: pro každou dvojici rodičů jedna „svorka“ ke všem dětem
+      const fams = new Map();
+      for (const n of tree) {
+        if (!pos[n.slug]) continue;
+        const f = n.father && pos[n.father] ? n.father : null, m = n.mother && pos[n.mother] ? n.mother : null;
+        if (!f && !m) continue;
+        const key = `${f || ''}|${m || ''}`;
+        if (!fams.has(key)) fams.set(key, { f, m, kids: [] });
+        fams.get(key).kids.push(n.slug);
+      }
+      let paths = '';
+      const cx = (s) => pos[s].x + CARD_W / 2;
+      for (const { f, m, kids } of fams.values()) {
+        const parents = [f, m].filter(Boolean);
+        const pyBottom = Math.max(...parents.map((s) => pos[s].y)) + CARD_H;
+        const barY = pyBottom + GAP_Y / 2;
+        const xs = parents.map(cx);
+        for (const s of parents) paths += `<path d="M ${cx(s)} ${pos[s].y + CARD_H} V ${barY}" />`;
+        const left = Math.min(...xs, ...kids.map(cx)), right = Math.max(...xs, ...kids.map(cx));
+        paths += `<path d="M ${left} ${barY} H ${right}" />`;
+        for (const k of kids) paths += `<path d="M ${cx(k)} ${barY} V ${pos[k].y}" />`;
+      }
+      // manželé mimo přímou linii: vodorovná spojnice mezi kartami (u párů s dětmi ji doplňuje svorka k dětem)
+      const done = new Set();
+      for (const n of tree) {
+        if (!pos[n.slug]) continue;
+        for (const s of n.partners || []) {
+          const key = [n.slug, s].sort().join('|');
+          if (!pos[s] || done.has(key) || (n.direct && byId[s]?.direct) || pos[s].y !== pos[n.slug].y) continue;
+          done.add(key);
+          const [a, b] = [pos[n.slug], pos[s]].sort((p, q) => p.x - q.x);
+          paths += `<path d="M ${a.x + CARD_W} ${a.y + CARD_H / 2} H ${b.x}" stroke-dasharray="5 4" />`;
+        }
+      }
+      svg.innerHTML = `<g fill="none" stroke="#cfc1aa" stroke-width="2" stroke-linecap="round">${paths}</g>`;
+      document.querySelectorAll('.mode-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.mode === mode));
+    }
+
+    // --- ovládání --------------------------------------------------------
+    // Zoom kolem bodu (cx, cy) ve výřezu – bod pod kurzorem zůstane na místě.
+    function zoomTo(s, cx = viewport.clientWidth / 2, cy = viewport.clientHeight / 2) {
+      const px = (viewport.scrollLeft + cx) / scale, py = (viewport.scrollTop + cy) / scale;
+      scale = Math.min(2, Math.max(0.03, s));
+      stage.style.transform = `scale(${scale})`;
+      sizer.style.width = layout.width * scale + 'px';
+      sizer.style.height = layout.height * scale + 'px';
+      viewport.scrollLeft = px * scale - cx;
+      viewport.scrollTop = py * scale - cy;
+    }
+    const fit = () => {
+      zoomTo(Math.min(1, (viewport.clientWidth - 20) / layout.width, (viewport.clientHeight - 20) / layout.height));
+      viewport.scrollLeft = 0; viewport.scrollTop = 0;
+    };
+    const centerOn = (slug, smooth) => {
+      const p = layout.pos[slug];
+      zoomTo(1);
+      viewport.scrollTo({ left: (p.x + CARD_W / 2) * scale - viewport.clientWidth / 2, top: (p.y + CARD_H / 2) * scale - viewport.clientHeight / 2,
+        behavior: smooth ? 'smooth' : 'auto' });
+    };
+    const goRoot = () => centerOn(rootSlug);
+    document.getElementById('btn-zoom-in')?.addEventListener('click', () => zoomTo(scale * 1.25));
+    document.getElementById('btn-zoom-out')?.addEventListener('click', () => zoomTo(scale / 1.25));
+    document.getElementById('btn-zoom-fit')?.addEventListener('click', fit);
+    document.getElementById('btn-zoom-root')?.addEventListener('click', goRoot);
+    document.querySelectorAll('.mode-btn').forEach((b) => b.addEventListener('click', () => {
+      mode = b.dataset.mode; try { localStorage.setItem('rodokmen-mode', mode); } catch (e) { /* ne */ }
+      render(); fit();
+    }));
+    // kolečko myši přibližuje bez Ctrl (jako MyHeritage); gesto sevření na touchpadu posílá wheel s ctrlKey a jemnějšími kroky
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? viewport.clientHeight : 1);
+      const r = viewport.getBoundingClientRect();
+      zoomTo(scale * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+    let panning = false, sx = 0, sy = 0, sl = 0, st = 0;
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target.closest('a, button, input')) return;
+      panning = true; viewport.classList.add('is-dragging'); sx = e.pageX; sy = e.pageY; sl = viewport.scrollLeft; st = viewport.scrollTop;
+    });
+    window.addEventListener('mousemove', (e) => { if (!panning) return; e.preventDefault(); viewport.scrollLeft = sl - (e.pageX - sx); viewport.scrollTop = st - (e.pageY - sy); });
+    window.addEventListener('mouseup', () => { panning = false; viewport.classList.remove('is-dragging'); });
+
+    const searchInput = document.getElementById('tree-search-input');
+    searchInput?.addEventListener('change', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) return;
+      const hit = tree.find((n) => layout.pos[n.slug] && n.name.toLowerCase().includes(q))
+        || tree.find((n) => n.name.toLowerCase().includes(q));
+      if (!hit) return;
+      if (!layout.pos[hit.slug]) { mode = 'all'; render(); }
+      centerOn(hit.slug, true);
+      const card = document.getElementById(`card-${hit.slug}`);
+      card?.classList.add('is-hit'); setTimeout(() => card?.classList.remove('is-hit'), 2500);
+    });
+
+    render();
+    goRoot();   // začít u výchozí osoby ve 100 %; „Vše“ ukáže celý strom
+  </script>
+</Base>

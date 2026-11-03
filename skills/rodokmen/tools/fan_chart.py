@@ -8,6 +8,7 @@ for _s in (sys.stdout, sys.stderr):   # UTF-8 výstup i na Windows bez -X utf8 (
         _s.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.environ.get("RODOKMEN_DATA") or os.path.join(ROOT, "data")
 OUT = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "vystupy")
 WEB = "--web" in sys.argv
 HREFS = {int(k): v for k, v in json.load(open(sys.argv[sys.argv.index("--web") + 1])).items()} if WEB else {}
@@ -19,17 +20,24 @@ CHROME = next((c for c in ("/Applications/Google Chrome.app/Contents/MacOS/Googl
                if os.path.exists(c) or __import__("shutil").which(c)), None)
 
 ns = {}
-exec(open(os.path.join(ROOT, "data", "osoby.py"), encoding="utf-8").read(), ns)
+exec(open(os.path.join(DATA, "osoby.py"), encoding="utf-8").read(), ns)
 P, LINES = ns["P"], ns.get("LINES", {})
-WEBCFG = json.load(open(os.path.join(ROOT, "data", "web.json"), encoding="utf-8")) if os.path.exists(os.path.join(ROOT, "data", "web.json")) else {}
+WEBCFG = json.load(open(os.path.join(DATA, "web.json"), encoding="utf-8")) if os.path.exists(os.path.join(DATA, "web.json")) else {}
+# na webu roky přesně jako na stránkách osob (web/src/data/site.json, ten export_web.py zapíše dřív) – vějíř a karta se nerozejdou
+SITE_YEARS = {}
+if WEB:
+    _site = json.load(open(os.path.join(ROOT, "web", "src", "data", "site.json"), encoding="utf-8"))
+    SITE_YEARS = {p["k"]: p["years"] for p in _site["people"].values() if p.get("k")}
+    SITE_YEARS.update({int(a): _site["people"][s]["years"] for a, s in _site.get("aliases", {}).items() if s in _site["people"]})
 
 W, H = (4520, 4520) if WEB else (4600, 5650)
 CX, CY = (2260, 2260) if WEB else (W / 2, 2760)
-RINGS = [(0, 240), (240, 440), (440, 650), (650, 880), (880, 1100), (1100, 1380),
-         (1380, 1640), (1640, 1870), (1870, 2010), (2010, 2130), (2130, 2240)]
+RINGS = [(0, 240), (240, 440), (440, 640), (640, 840), (840, 1040), (1040, 1280),
+         (1280, 1500), (1500, 1700), (1700, 1840), (1840, 1970), (1970, 2080),
+         (2080, 2140), (2140, 2195), (2195, 2245)]
 BASE = {8: "#EFB45F", 9: "#F09A78", 10: "#E58AA6", 11: "#B99AE0",
         12: "#86B8E8", 13: "#6FCBB9", 14: "#9CD17A", 15: "#D3D46A"}
-LIGHT = {3: 0.0, 4: 0.18, 5: 0.32, 6: 0.44, 7: 0.55, 8: 0.64, 9: 0.72, 10: 0.78}
+LIGHT = {3: 0.0, 4: 0.18, 5: 0.32, 6: 0.44, 7: 0.55, 8: 0.64, 9: 0.72, 10: 0.78, 11: 0.83, 12: 0.87, 13: 0.90}
 SIDE_COL = {0: "#E9DFCF", 1: "#D6E2EC"}          # father / mother half, generations 1–2
 EMPTY, FONT = "#ECE8E0", "Helvetica Neue, Helvetica, Arial, sans-serif"
 MINF = {5: 15, 6: 13, 7: 11, 8: 9.5, 9: 8.5, 10: 7.5}
@@ -46,10 +54,11 @@ def years(y):
     ys = re.findall(r"\d{4}", y)
     if not ys:
         return ""
-    approx = "≈" if re.match(r"^(asi|≈)", y) else ""
+    approx = "≈" if re.match(r"^(asi|kol\.|cca|≈)", y) else ""
     head, dash, tail = y.partition("–")
-    if y.startswith(("?", "†")) or (dash and not re.search(r"\d", head)) or re.match(r"po\b", y):
-        # neznámé narození: ukázat jen úmrtí („? – před 1743“ → „† před 1743“, „– po 1921“ → „žil 1921“)
+    if y.startswith(("?", "†")) or (dash and not re.search(r"\d{4}", head)) or re.match(r"po\b", y):
+        # neznámý rok narození (i „18. stol. – před 1818“): ukázat jen úmrtí
+        # („? – před 1743“ → „† před 1743“, „– po 1921“ → „žil 1921“)
         if re.search(r"\bpo\b", tail or y):
             return "žil " + ys[-1]
         return "† " + ("před " if "před" in y else "") + ys[-1]
@@ -57,8 +66,9 @@ def years(y):
         return "* " + ys[0]
     if len(ys) == 1:
         return approx + ys[0] + ("–?" if dash else "")
-    second = "?" if "před" in tail else ("po " if re.search(r"\bpo\b", tail) else "") + \
-        ("≈" if re.search(r"(asi|≈)", tail) else "") + ys[-1]
+    # horní mez úmrtí ukázat („1835–před 1921“), ne jen otazník
+    second = ("před " if "před" in tail else "po " if re.search(r"\bpo\b", tail) else "") + \
+        ("≈" if re.search(r"(asi|kol\.|cca|≈)", tail) else "") + ys[-1]
     return f"{approx}{ys[0]}–{second}"
 
 
@@ -103,8 +113,20 @@ def fit(text, avail, fmax, fmin):
 
 
 paths, defs, texts, links = [], [], [], []
-slots = sorted({k for k in P if gen(k) < len(RINGS)} |   # vějíř má 11 prstenců (generace 0–10); starší předky vynech
-               {c for k in P for c in (2 * k, 2 * k + 1) if gen(c) <= 10 and k in P})
+slots_set = {k for k in P if gen(k) < len(RINGS)} | \
+            {c for k in P for c in (2 * k, 2 * k + 1) if gen(c) < len(RINGS) and k in P}
+
+# Doplnit šedé výřezy i pro celou šířku větve pokračující za 10. generaci
+for k in list(slots_set):
+    if gen(k) == 10 and any(gen(pk) > 10 and (pk >> (gen(pk) - 10)) == k for pk in P):
+        for g in range(11, len(RINGS)):
+            k_start = k * (2 ** (g - 10))
+            k_end = (k + 1) * (2 ** (g - 10))
+            for sk in range(k_start, k_end):
+                slots_set.add(sk)
+
+slots = sorted(slots_set)
+
 for k in slots:
     g = gen(k)
     r0, r1 = RINGS[g]
@@ -116,10 +138,12 @@ for k in slots:
     p = P.get(k)
     if not p:
         continue
-    name, yrs, st = p["n"], years(p.get("y")), p.get("st")
+    name, yrs, st = p["n"], SITE_YEARS[k] if k in SITE_YEARS else years(p.get("y")), p.get("st")
     if k in HREFS:
         shape = (f'<circle cx="{CX}" cy="{CY}" r="{r1}"/>' if g == 0 else f'<path d="{sector(r0, r1, a0, a1)}"/>')
         links.append(f'<a href="{HREFS[k]}"><title>{html.escape(name)} {html.escape(yrs)}</title>{shape}</a>')
+    if g > 10:   # generace 11 a 12 jsou jen výřezy bez textu (ve výseči 0.17° by byl nečitelný)
+        continue
     unknown = st == "unk"
     style = 'font-style="italic" fill="#8A8278"' if unknown else ('font-style="italic" fill="#2B2620"' if st in ("prob", "mh") else 'fill="#1F1A15"')
     if g == 0:
@@ -161,7 +185,7 @@ for k in slots:
                 d = f"M{xa:.1f},{ya:.1f} A{r:.1f},{r:.1f} 0 {1 if b1 - b0 > 180 else 0} 1 {xb:.1f},{yb:.1f}"
             defs.append(f'<path id="{pid}" d="{d}" fill="none"/>')
             texts.append(f'<text font-size="{s:.1f}" {a}><textPath href="#{pid}" startOffset="50%" text-anchor="middle">{html.escape(t)}</textPath></text>')
-    else:        # radial text
+    else:        # radial text (5 <= g <= 10)
         rm = (r0 + r1) / 2
         depth = (r1 - r0) - 22
         arc = math.radians(a1 - a0) * rm
@@ -183,7 +207,7 @@ for k in slots:
 # statistics
 known = [k for k, p in P.items() if k > 1 and not p["n"].startswith("otec neuveden")]
 doc = [k for k in known if P[k].get("st") == "doc"]
-zpath = os.path.join(ROOT, "data", "zaznamy.json")
+zpath = os.path.join(DATA, "zaznamy.json")
 recs = json.load(open(zpath, encoding="utf-8")) if os.path.exists(zpath) else []
 maxg = max(gen(k) for k in P)
 
@@ -193,26 +217,7 @@ title = (f'<text x="{W / 2}" y="250" text-anchor="middle" font-family="Georgia, 
 lx, ly = 300, CY + 2240 + 170
 legend = []
 items = [(k, LINES[k][0]) for k in range(8, 16) if k in LINES]
-
-
-def popis_rodu(text, jmeno):
-    """První věta popisu rodu, zkrácená na celé slovo, aby se vešla do sloupce legendy.
-    Tečka končí větu jen před velkým písmenem nebo na konci a po slově s aspoň 4 znaky – „čp. 41“, „roz. Nová“,
-    „sv. Jan“ ani „19. století“ větu neukončí."""
-    t = text.split(";")[0].strip()
-    for m in re.finditer(r"\.(\s+|$)", t):
-        za, pred = t[m.end():m.end() + 1], t[:m.start()].split()[-1:]
-        if (not za or za.isupper()) and pred and len(pred[0]) >= 4:
-            t = t[:m.start()]
-            break
-    t = t.rstrip(". ")
-    limit = max(30, 84 - len(jmeno))   # sloupec legendy pojme asi 85 znaků písmem 40 px
-    if len(t) > limit:
-        t = t[:limit].rsplit(" ", 1)[0].rstrip(",;:–- ") + "…"
-    return t
-
-
-desc = {k: popis_rodu(LINES[k][1], nm) for k, nm in items}
+desc = {k: (LINES[k][1].split(";")[0].split(".")[0])[:70] for k, _ in items}
 for idx, (k, nm) in enumerate(items):
     col, row = idx // 4, idx % 4
     x, y = lx + col * 1950, ly + row * 78

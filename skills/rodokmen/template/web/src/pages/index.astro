@@ -13,7 +13,7 @@ const cards = config.zajimavosti_na_uvodu ?? [];
 <Base title="" wide>
   <h1>{config.nazev || 'Rodokmen'}</h1>
 
-  {!!(uvod.nadpis || uvod.odstavce?.length) && (
+  {(uvod.nadpis || uvod.odstavce?.length) && (
     <section class="teaser">
       <div>
         {uvod.nadpis && <h2>{uvod.nadpis}</h2>}
@@ -82,5 +82,10 @@ const cards = config.zajimavosti_na_uvodu ?? [];
     <MobileTree k={1} />
   </div>
   <div class="fan-preview only-desktop"><a class="cover" href="/vejir/" aria-label="Otevřít vějíř předků přes celou obrazovku"></a><Fragment set:html={fan} /></div>
-  <p><a class="btn" href="/vejir/">Otevřít vějíř předků přes celou obrazovku →</a> <a href="/predci/" style="margin-left:1rem">nebo seznam všech předků</a></p>
+  <p style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-top:1rem;">
+    <a class="btn" href="/rodokmen/">Klasický rodokmen (strom) →</a>
+    <a class="btn" href="/vejir/">Kruhový vějíř →</a>
+    <a class="btn" href="/rodokmen.ged" download>⬇ Stáhnout GEDCOM (.ged)</a>
+    <a href="/predci/" style="align-self:center;margin-left:0.5rem">Seznam všech předků</a>
+  </p>
 </Base>

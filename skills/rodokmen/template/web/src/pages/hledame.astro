@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { issues, config } from '../lib/data.js';
+import { issues, config, claims } from '../lib/data.js';
 import { Content as Dotazy } from '../generated/dotazy.md';
 ---
 <Base title="Co hledáme">
@@ -8,13 +8,32 @@ import { Content as Dotazy } from '../generated/dotazy.md';
   <p class="lead">Otevřené otázky a hypotézy. Pokud o něčem z toho víte z rodinné paměti nebo dokumentů, ozvěte se{config.kontakt?.email ? <> na <a href={`mailto:${config.kontakt.email}`}>{config.kontakt.email}</a></> : ' autorovi rodokmenu'}.</p>
   <h2>Otevřené otázky</h2>
   <div class="grid2">
-    {issues.filter((i) => !i.text.startsWith('Vyřešeno')).map((i) => (
+    {issues.filter((i) => !(i.solved ?? i.text.startsWith('Vyřešeno'))).map((i) => (
       <div class="card">
         <h3>{i.title}</h3>
+        {i.people?.length > 0 && <p class="small">{i.people.map((o, n) => <>{n > 0 && ' · '}<a href={`/osoba/${o.slug}/`}>{o.name} →</a></>)}</p>}
         <p class="small"><span class={`chip ${i.text.startsWith('Vyřešeno') ? 'st-doc' : i.text.startsWith('Hypotéza') ? 'st-prob' : 'st-unk'}`}>{i.text.split(':')[0]}</span> {i.text.slice(i.text.indexOf(':') + 1)}</p>
       </div>
     ))}
   </div>
+  {claims.length > 0 && (
+    <>
+      <h2>Zatím neověřené údaje <span class="muted small">({claims.length})</span></h2>
+      <p class="small muted">Co je v rodokmenu napsané, ale nemáme to z přečteného matričního zápisu: údaje od rodiny, z cizích rodokmenů na internetu, naše hypotézy a tvrzení bez pramene. Na webu jsou označené štítkem; tady jsou pohromadě, abychom na ně nezapomněli.</p>
+      <div class="table-box"><table>
+        <thead><tr><th>Druh</th><th>Údaj</th><th>Kde</th></tr></thead>
+        <tbody>
+          {claims.map((c) => (
+            <tr>
+              <td><span class={`chip zn-chip zn-${c.kind.normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}>{c.label}</span></td>
+              <td class="small">{c.text}</td>
+              <td class="small">{c.where.type === 'osoba' ? <a href={`/osoba/${c.where.slug}/`}>{c.where.name}</a> : <a href={c.where.slug}>{c.where.name}</a>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+    </>
+  )}
   <h2>Prameny mimo online matriky</h2>
   <div class="prose small"><Dotazy /></div>
   <p><a href="/denik/">Výzkumný deník – všechna hledání včetně neúspěšných →</a></p>
