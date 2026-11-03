@@ -17,6 +17,8 @@ Nové nástroje pro mimomatriční prameny, interaktivní rodokmen, sčítání 
 - **Pozemkové knihy:** vyhledávání osob z rodokmenu v obci (`tools/pozemky.py predci`) a rychlé náhledy rejstříků (`pozemky.py rejstrik`).
 - **Pojistky kvality:** kontrola chronologie a podezřelých dat (`tools/kontrola_dat.py`), ověřování výsledků pomocníků proti halucinacím (`tools/kontrola_vysledku.py`).
 - **Geokódování domů:** vyhledání souřadnic konkrétního čp. pro mapu (`tools/dum.py`).
+- **Sdílená cache snímků (`tools/cache.py`):** převzato z PR #60 (Adam Fišer) – stejný snímek se z archivu stahuje jen jednou do `~/.cache/rodokmen_snimky/`, opakovaná čtení jdou z disku. Integrováno do všech archivních nástrojů včetně MZA.
+- **Podpora pro novou ochranu MZA (ALTCHA):** `tools/mza.py` automaticky řeší novou Proof-of-Work ochranu (ALTCHA) a dynamické časové tokeny MZA Acta Publica.
 - **Rychlé hledání výřezu:** lokalizace polohy výřezu ve velkém snímku pomocí FFT za 0,5 s (`tools/najdi_vyrez.py`).
 - **Export GEDCOM:** generování standardního GEDCOM 5.5.1 souboru z dat projektu (`tools/gedcom.py`).
 - **Web:** nová stránka interaktivního rodokmenu s přepínáním přímé linie a celé rodiny (`rodokmen.astro`), zoomování kolečkem, podpora pro až 14 prstenců vějíře.

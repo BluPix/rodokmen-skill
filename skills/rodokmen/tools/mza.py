@@ -21,7 +21,12 @@ Bezpečnost a ohleduplnost k serveru MZA:
   - Nikdy nezahltí server: omezuje souběh na max. 2–3 vlákna, ověřuje platnost JPEG hlaviček.
   - Při chybě 503/429 automaticky počká a zopakuje pokus.
 """
-import glob, json, math, os, re, shutil, subprocess, sys, tempfile, time
+import base64, glob, hashlib, json, math, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse
+import os as _os, sys as _sys; _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+try:
+    import cache
+except ImportError:
+    cache = None
 
 for _s in (sys.stdout, sys.stderr):
     if hasattr(_s, "reconfigure"):
@@ -29,7 +34,56 @@ for _s in (sys.stdout, sys.stderr):
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = "https://www.mza.cz"
-CHROME_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+CHROME_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+COOKIE_FILE = os.path.join(tempfile.gettempdir(), "mza_cookies.txt")
+
+
+def solve_altcha(referer):
+    """Automatické vyřešení ALTCHA Proof-of-Work kontroly MZA v Pythonu (SHA-256 trvá ~0.2 s)."""
+    cmd = [
+        "curl", "-s", "--http2",
+        "-c", COOKIE_FILE, "-b", COOKIE_FILE,
+        "-H", f"User-Agent: {CHROME_UA}",
+        "-H", f"Referer: {referer}",
+        f"{BASE}/actapublica/altcha/challenge"
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        ch = json.loads(res.stdout)
+    except Exception as e:
+        raise RuntimeError(f"Chyba při čtení ALTCHA challenge: {res.stdout[:200]}") from e
+
+    salt = ch["salt"]
+    target = ch["challenge"]
+    max_n = ch.get("maxNumber", 1000000)
+    found = None
+    for n in range(max_n + 1):
+        if hashlib.sha256((salt + str(n)).encode("utf-8")).hexdigest() == target:
+            found = n
+            break
+    if found is None:
+        raise RuntimeError("Nepodařilo se vyřešit ALTCHA kontrolu")
+
+    payload = {
+        "algorithm": ch["algorithm"],
+        "challenge": ch["challenge"],
+        "number": found,
+        "salt": ch["salt"],
+        "signature": ch["signature"]
+    }
+    b64 = base64.b64encode(json.dumps(payload).encode()).decode()
+    cmd2 = [
+        "curl", "-s", "--http2",
+        "-c", COOKIE_FILE, "-b", COOKIE_FILE,
+        "-H", f"User-Agent: {CHROME_UA}",
+        "-H", f"Referer: {referer}",
+        "-H", "Accept: application/json",
+        "-d", f"altcha={urllib.parse.quote(b64)}",
+        f"{BASE}/actapublica/altcha/verify"
+    ]
+    res2 = subprocess.run(cmd2, capture_output=True, text=True)
+    if '"ok":true' not in res2.stdout and '"ok": true' not in res2.stdout:
+        raise RuntimeError(f"Ověření ALTCHA selhalo: {res2.stdout[:200]}")
 
 
 def nahled_cesta(out_file):
@@ -47,27 +101,32 @@ def magick():
     return m
 
 
-def get_detail_page(detail_id):
+def get_detail_page(detail_id, force=False):
     """Stáhne nebo načte z cache seznam snímků pro danou matriku."""
     cache_path = os.path.join(ROOT, "pracovni", f"mza_detail_{detail_id}.html")
-    if os.path.exists(cache_path) and os.path.getsize(cache_path) > 1000:
-        with open(cache_path, "r", encoding="utf-8") as f:
-            return f.read()
+    if not force and os.path.exists(cache_path) and os.path.getsize(cache_path) > 1000:
+        # Tokeny v MZA od podzimu 2026 expirují po několika hodinách
+        if time.time() - os.path.getmtime(cache_path) < 7200:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if "CreateSeadragon" in content and "altcha-gate" not in content and "/iip-srv/" in content:
+                    return content
 
     url = f"{BASE}/actapublica/matrika/detail/{detail_id}"
     cmd = [
         "curl", "-s", "-L", "--http2",
         "--connect-timeout", "6", "--max-time", "20",
+        "-c", COOKIE_FILE, "-b", COOKIE_FILE,
         "-H", f"User-Agent: {CHROME_UA}",
         "-H", "Referer: https://www.mza.cz/actapublica/matrika/hledani",
         url
     ]
     res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode != 0 or len(res.stdout) < 1000:
-        # Zkusíme s cookies
-        res = subprocess.run(cmd + ["-c", "/tmp/mza_cookies.txt", "-b", "/tmp/mza_cookies.txt"],
-                             capture_output=True, text=True)
-    if len(res.stdout) > 1000:
+    if "altcha-gate" in res.stdout or "<altcha-widget" in res.stdout or "CreateSeadragon" not in res.stdout:
+        solve_altcha(url)
+        res = subprocess.run(cmd, capture_output=True, text=True)
+
+    if len(res.stdout) > 1000 and "CreateSeadragon" in res.stdout:
         os.makedirs(os.path.dirname(cache_path), exist_ok=True)
         with open(cache_path, "w", encoding="utf-8") as f:
             f.write(res.stdout)
@@ -75,9 +134,9 @@ def get_detail_page(detail_id):
     raise RuntimeError(f"Nepodařilo se stáhnout stránku detailu {detail_id} z MZA (kód {res.returncode}, délka {len(res.stdout)})")
 
 
-def get_scan_dzi_urls(detail_id):
+def get_scan_dzi_urls(detail_id, force=False):
     """Vrátí seznam všech DZI adres pro dané detail_id."""
-    html = get_detail_page(detail_id)
+    html = get_detail_page(detail_id, force=force)
     # Hledáme CreateSeadragon([...])
     m = re.search(r'CreateSeadragon\(\s*(\[[^\]]+\])', html)
     if m:
@@ -93,6 +152,7 @@ def get_dzi_dimensions(dzi_url, referer):
     cmd = [
         "curl", "-s", "--http2",
         "--connect-timeout", "5", "--max-time", "10",
+        "-c", COOKIE_FILE, "-b", COOKIE_FILE,
         "-H", f"User-Agent: {CHROME_UA}",
         "-H", f"Referer: {referer}",
         dzi_url
@@ -125,6 +185,7 @@ def download_tile(url, out_path, referer, retries=2):
         cmd = [
             "curl", "-s", "--http2",
             "--connect-timeout", "5", "--max-time", "10",
+            "-c", COOKIE_FILE, "-b", COOKIE_FILE,
             "-H", f"User-Agent: {CHROME_UA}",
             "-H", f"Referer: {referer}",
             "-o", out_path,
@@ -145,6 +206,7 @@ def download_tiles_batch(items, referer):
         "curl", "-s", "--http2",
         "--connect-timeout", "5",
         "--max-time", str(max(10, len(items) * 3)),
+        "-c", COOKIE_FILE, "-b", COOKIE_FILE,
         "-H", f"User-Agent: {CHROME_UA}",
         "-H", f"Referer: {referer}",
     ]
@@ -162,6 +224,14 @@ def download_tiles_batch(items, referer):
 
 def snimek(detail_id, scan_num, out_file, nahled=False, crop=None, dzi_urls=None, referer=None):
     """Stáhne snímek nebo jeho výřez. dzi_urls/referer předává scitani.py (sčítací operáty MZA mají stejný server)."""
+    if crop is None and cache:
+        klic = f"mza/{detail_id}/sn{int(scan_num):04d}{'-nahled' if nahled else ''}.jpg"
+        cache.soubor(klic, out_file, lambda cil: _stahni_snimek(detail_id, scan_num, cil, nahled, None, dzi_urls, referer))
+        return
+    _stahni_snimek(detail_id, scan_num, out_file, nahled, crop, dzi_urls, referer)
+
+
+def _stahni_snimek(detail_id, scan_num, out_file, nahled=False, crop=None, dzi_urls=None, referer=None):
     MAGICK = magick()
     referer = referer or f"{BASE}/actapublica/matrika/detail/{detail_id}"
     dzi_urls = dzi_urls or get_scan_dzi_urls(detail_id)
@@ -172,7 +242,14 @@ def snimek(detail_id, scan_num, out_file, nahled=False, crop=None, dzi_urls=None
     # Odstraníme .dzi na konci pro základ dlaždic
     base_tile_url = dzi_url[:-4] + "_files"
 
-    W, H, T = get_dzi_dimensions(dzi_url, referer)
+    try:
+        W, H, T = get_dzi_dimensions(dzi_url, referer)
+    except Exception:
+        # Zkusíme obnovit detail (např. při vypršení časového tokenu v URL snímků)
+        dzi_urls = get_scan_dzi_urls(detail_id, force=True)
+        dzi_url = dzi_urls[scan_num - 1]
+        base_tile_url = dzi_url[:-4] + "_files"
+        W, H, T = get_dzi_dimensions(dzi_url, referer)
     max_level = math.ceil(math.log2(max(W, H)))
 
     if nahled:
