@@ -10,7 +10,7 @@ Použití (z kořene projektu):
 
 Ověřené výjimky: když zápis přečteš znovu ze snímku a údaj v matrice opravdu je (písař se spletl), přidej do
 data/kontrola_dat_ok.txt řádek „začátek hlášení | proč je to v pořádku“ – např.
-  #24 Jan Holubář: věk při úmrtí 3. 3. 1908 | sn. 102 přečten znovu 29. 10. 2026, v zápisu opravdu 49 let
+  #24 Jan Novák: věk při úmrtí 3. 3. 1890 | sn. 12 přečten znovu, v zápisu opravdu 49 let
 Hlášení začínající tímto textem se pak už nevypisuje (jen se sečte).
 
 Co hlídá (vše z data/osoby.py, data/zaznamy.json a data/prepisy.json):
@@ -209,7 +209,7 @@ def main():
         return {ascii_(w)[:4] for w in n if len(w) > 2}
 
     def jmena(p):
-        """(křestní kmen, {kmeny příjmení}) – příjmení rodné i po svatbě („provdaná Saláková, později Mašková“)."""
+        """(křestní kmen, {kmeny příjmení}) – příjmení rodné i po svatbě („provdaná Černá, později Dvořáková“)."""
         n = re.sub(r"\s*\(.*?\)", "", p.get("n", "")).replace("P. ", "").split()
         if not n:
             return None, set()
@@ -476,7 +476,7 @@ def main():
         for s in p["_ev"]["snatky"]:
             d = s["d"]
             jm = re.split(r"\s*[,(]|\s+z\s+|\s+\(", re.sub(r"^(kol\.\s*)?(\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4}\s*", "", s["kdo"]))[0]
-            jm = re.sub(r"\b(Rudíkov|Vladislav|Benetice|Chlum|Brtnice|Tasov|Okřešice)\b\s*", "", jm).strip()
+            jm = jm.strip()
             for k2 in podle_jmena.get(slug(jm), []):
                 if k2 == k:
                     continue

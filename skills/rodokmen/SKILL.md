@@ -25,90 +25,21 @@ Najdeš v ní `tools/` (nástroje), `template/` (šablona projektu a webu) a `re
 - Dnešní datum (do deníku, STAV.md) ber z příkazu `date`, ne z hlavy.
 
 ## Na začátku každé konverzace
-1. Jsi ve složce projektu? (`data/STAV.md` existuje.) → Přečti `data/STAV.md`, konec `data/research_log.md`
+1. Jsi ve složce projektu? (`data/STAV.md` existuje.) → Přečti `data/STAV.md` a posledních 5 řádků `data/research_log.md` (`tail -n 5`, deník má dlouhé řádky)
    a pokračuj podle sekce „Rozpracováno“. Krátce uživateli shrň, kde jste skončili.
    **Verze:** porovnej soubor `.skill_verze` v projektu se `SKILL_DIR/VERZE`. Chybí-li, nebo se liší, řekni jednou větou,
    že je nová verze skillu, a nabídni aktualizaci projektu: `python3 -I SKILL_DIR/tools/novy_projekt.py <složka projektu>`
    (data zůstanou, změněné soubory webu se zazálohují do `pracovni/`), pak ve `web/` `npm install`. Po souhlasu ji udělej
    a podle výpisu převezmi ze zálohy případné úpravy vzhledu (viz `reference/web.md`). Odmítne-li, připomeň to až příště.
-   Aktualizace z verze starší než 0.6.0 přidá brzdu proti zablokování archivem: zeptej se i na hlídač sítě (viz Fáze 0,
-   krok 2). Po aktualizaci řekni uživateli, ať pro jistotu restartuje Claude Code – změny v `.claude/settings.json`
-   (zákaz `curl`, hlídač) se jinak nemusí projevit hned.
-2. Projekt ještě není → **Fáze 0**.
+2. Projekt ještě není → **Fáze 0** (`reference/zacatek.md`).
 
-## Fáze 0 – Příprava (jednou)
-1. Zkontroluj nástroje: `python3 --version` (≥ 3.9), `node --version` (≥ 20), `magick -version` (ImageMagick 7; je-li jen
-   verze 6 s příkazem `convert`, nástroje ji mimo Windows použijí samy), `git --version`.
-   Co chybí, pomoz nainstalovat (macOS: Homebrew `brew install python node imagemagick git`; Windows: winget / instalátory
-   z python.org, nodejs.org, imagemagick.org). **winget na Windows vždy s plnými přepínači**, jinak spadne na otázce
-   ke zdroji msstore („Error reading input in prompt“): `winget install --id <balík> --source winget
-   --accept-source-agreements --accept-package-agreements` (balíky `Python.Python.3.12` + `--scope user`,
-   `OpenJS.NodeJS.LTS`, `ImageMagick.ImageMagick`, `Git.Git`). Instalace systémových věcí nech uživatele potvrdit;
-   interaktivní příkazy mu dej s předponou `!`, ať je spustí sám.
-   **macOS:** ověř https: `python3 -I -c "import urllib.request; urllib.request.urlopen('https://aron.vychodoceskearchivy.cz')"`.
-   Python z python.org po instalaci nemá certifikáty (`CERTIFICATE_VERIFY_FAILED`) – ať uživatel spustí
-   `Install Certificates.command` ve složce `/Applications/Python 3.x/`, nebo použij Python z Homebrew (`/opt/homebrew/bin/python3`).
-   **Windows:** `python3` tam bývá jen nefunkční alias z Microsoft Store („Python nebyl nalezen“) – zkontroluj
-   `python --version` (případně `py -3 --version`) a ve všech příkazech tohoto skillu místo `python3 -I` používej
-   `python -I -X utf8` (funguje-li jen launcher, tak `py -3 -I -X utf8`). Zkontroluj **který** Python to je
-   (`which -a python`) – může být přibalený k jinému programu (Inkscape, GIMP…) a nemít certifikáty. Ověř https:
-   `python -I -c "import urllib.request; urllib.request.urlopen('https://aron.vychodoceskearchivy.cz')"`. Když spadne
-   na `CERTIFICATE_VERIFY_FAILED`, nainstaluj běžný Python (winget výše) a volej ho plnou cestou
-   `"$LOCALAPPDATA/Programs/Python/Python312/python.exe"` (do PATH se dostane až po restartu Claude Code). `-I` ignoruje proměnnou `PYTHONUTF8`;
-   bez `-X utf8` je výstup do roury nebo souboru v kódování Windows (cp1250) – čeština se rozbije a některé nástroje
-   spadnou na znacích jako „→“. ImageMagick: `winget install --id ImageMagick.ImageMagick --source winget --accept-source-agreements --accept-package-agreements`; do PATH se dostane až po
-   restartu Claude Code (do té doby před příkazy `export PATH="/c/Program Files/ImageMagick-7…:$PATH"` s přesnou složkou
-   z `C:\Program Files`). **Nikdy `convert`** (to je systémový nástroj Windows), vždy `magick`. Skripty `.sh` spouštěj
-   přes Git Bash (`bash tools/…`). Delší jednorázové skripty v Pythonu nepiš jako heredoc (`python - <<EOF`), v Git Bash
-   občas spadnou na „unexpected EOF“ – zapiš je do souboru v `pracovni/` a spusť. Tato pravidla zapiš hned po založení projektu do jeho `CLAUDE.md`, ať platí i příště
-   (a dej je do zadání i pomocníkům, viz `reference/matriky.md`).
-   **Prohlížeč pro Clauda** potřebuješ pro archivy, které nástroje nepouštějí (MZA Brno, SOA Třeboň, ZA Opava,
-   hledání v SOA Litoměřice). Když předci žili tam a nemáš nástroje `mcp__…playwright…`, nabídni doplněk
-   Playwright: `/plugin install playwright@claude-plugins-official` (dej ho uživateli s `!` jako
-   `claude plugin install playwright@claude-plugins-official`), pak restart Claude Code. Jinou možností je Claude
-   in Chrome (`/chrome`), postupy v `portaly.md` jsou ale vyzkoušené s Playwrightem (snímek obrazovky do souboru).
-   Bez prohlížeče ať uživatel posílá snímky obrazovky.
-2. Zeptej se, kde má projekt být (navrhni `~/Rodokmen`), a založ ho:
-   `python3 -I SKILL_DIR/tools/novy_projekt.py <složka>`
-   Chce-li uživatel nejdřív vidět, jak web vypadá, založ vedle ukázku: `… novy_projekt.py ~/Rodokmen-ukazka --ukazka`,
-   pak `cd web && npm install && npm run nahled` a pošli mu odkaz http://localhost:4321.
-   Pak se zeptej, jestli zapnout **hlídač sítě** (`… novy_projekt.py <složka> --hlidac`, vypnutí `--bez-hlidace`).
-   Vysvětli jednou větou: archivy blokují IP adresu po sérii rychlých dotazů. Hlídač je malý skript v projektu
-   (`tools/hlidac_site.py`), který před každým příkazem zkontroluje, že stahování jde přes brzdu, a jinak ho zamítne.
-   Sám nic nestahuje. Bez něj platí jen pravidla níže a zákaz přímého `curl`/`wget` v `.claude/settings.json`.
-3. V projektu `git init` a první uložení (git = historie změn, kdyby se něco pokazilo). Doporuč pokračovat v Claude Code
-   **z této složky** (soubor `CLAUDE.md` v ní zajistí, že příště navážeš).
-4. Vyplň v `data/STAV.md` sekci „Pro koho“ a v `data/web.json` název webu („Rodokmen Novákových“),
-   jakmile znáš příjmení výchozí osoby (šablona je prázdná).
+**Jeden úkol = jedna konverzace.** Každý krok čte znovu celou dosavadní konverzaci, takže dlouhá konverzace je nejdražší
+místo práce (měřeno: 60–68 % spotřeby je opakované čtení kontextu). Po uzavřeném úkolu (zapsaná dávka, hotové kolo, commit)
+zapiš stav do `data/STAV.md` a navrhni uživateli novou konverzaci.
 
-## Fáze 1 – Rozhovor s rodinou (nejcennější hodina celého projektu)
-Cíl: znát co nejvíc o 3–4 generacích nazpět, než sáhneš do matrik.
-- Ptej se postupně (ne dotazníkem naráz): výchozí osoba (pro koho rodokmen je – on sám, partner, dítě?), rodiče,
-  prarodiče, pradědečci: **jména, rodná příjmení žen, roky a místa narození, sňatky, úmrtí (a kde jsou pohřbeni), řemesla, domy (čísla popisná!)**.
-- Požádej o dokumenty: rodné a oddací listy, domovské listy, parte, fotky (i náhrobků), rodinné kroniky, paměti, staré dopisy,
-  výpisy z MyHeritage/Geni od příbuzných. Ať je dá do `dokumenty/`. Přečti je celé (PDF/fotky) a vytěž.
-- Doporuč zeptat se nejstarších žijících příbuzných – teď, dokud to jde. Nabídni seznam otázek.
-- **Příbuzenství ber doslova, jak ho rodina řekla** („pradědeček babičky“ ≠ „otec babičky“) – nikdy ho neopravuj podle
-  toho, co se ti hodí do dat. Při nejasnosti se zeptej. Ztotožnění jen podle křestního jména veď jako `prob` s poznámkou.
-- Vše zapiš: `data/udaje_od_rodiny.md` (kdo co řekl), osoby do `data/osoby.py` se stavem `fam`
-  (formát v hlavičce souboru a v `reference/data.md`). Žijící lidé jen jméno a rok narození.
-- **Rodinný strom jako soubor GEDCOM** (`.ged`, export z MyHeritage/Geni/FamilySearch): `python3 -I tools/ged_import.py
-  dokumenty/strom.ged "Jméno Příjmení"` vypíše předky s čísly, všechny události a poznámky a **frontu zápisů**
-  (nejmladší známá událost u každého předka, a jestli už je v archivu). `--osoby` dá kostru pro `osoby.py`.
-  Poznámky ve stromu bývají plné rodinných historek. Přečti je a vytěž do `udaje_od_rodiny.md`.
-  Starší strom z **Brother's Keeper** (kódování ANSI a česká data „SRPEN 1945“ nástroj převede sám): místa tam bývají
-  v 6. pádě („Táboře“) – do `osoby.py` je přepiš do 1. pádu. Kořenem takového stromu často nejsou uživatel, ale jeho děti
-  (oba rody) – výchozí osobu proto vyber jménem.
-- **Záloha stromu z MyHeritage** (ZIP se souborem `<strom>.ftb` a složkou `Photos/` – to není GEDCOM, ale databáze):
-  rozbal do vlastní složky v `dokumenty/` (bývá velká – dej ji do `.gitignore`), pak
-  `python3 -I tools/ftb_export.py <strom.ftb> dokumenty/strom.ged "Jméno Příjmení" <rok narození> pracovni/prima_linie.md <složka Photos>`.
-  Vznikne GEDCOM pro `ged_import.py` (bez adres, e-mailů a telefonů) a přehled přímé linie s **původem údajů** – u každé
-  osoby, ze kterých cizích stromů (Smart Match) či zdrojů její údaje přišly. Do `osoby.py`: osoba bez cizí citace = `fam`,
-  doložená jen cizími stromy = `mh`. Údaje ze stromů (i Smart Match) jsou jen vodítko k zápisu – datum a číslo domu tě
-  dovedou na stránku, ale **jména vždy ověř v zápisu** (skutečná chyba: „sňatek“ ze Smart Match byl jiný pár ze stejného domu). V přehledu jsou i připojené skeny (opisy matrik, parte, domovské listy) – přečti je,
-  bývají to nejcennější rodinné doklady.
-- Strom, který si rodina vede sama, má stav `fam`. Cizí stromy z internetu (stromy jiných lidí na MyHeritage, Geni,
-  FamilySearch) jsou **jen vodítko**, stav `mh`, nikdy `doc`.
+## Fáze 0 – Příprava (jednou) a Fáze 1 – Rozhovor s rodinou
+Jen u nového projektu nebo před rozhovorem s rodinou: postup je v `reference/zacatek.md`, přečti ho, než začneš.
+U běžícího projektu ho nenačítej.
 
 ## Fáze 2 – Matriky, generace po generaci
 Podrobný postup čtení: `reference/matriky.md`. Portály archivů: `reference/portaly.md`. Metodika: `reference/playbook.md` (EN).
@@ -124,13 +55,12 @@ Základní smyčka pro každou osobu:
 2. **Ověř přístupnost**: matriky jsou v archivu až po uplynutí lhůty od *posledního* zápisu ve svazku
    (narození 100 let, sňatky 75, úmrtí 30). Mladší údaje jsou na matričním úřadě (žádost s doložením příbuzenství) –
    zapiš do `data/archivni_dotazy.md` a jdi dál.
-3. **Najdi svazek**: podle obce → farnost → archiv. ARON: `python3 -I tools/aron_search.py "Obec"`, SOA Plzeň:
-   `tools/portafontium.py`, SOA Praha (střední Čechy): `tools/ebadatelna.py`, Praha: `tools/ahmp_search.sh`;
-   MZA Brno a SOA Třeboň jen v prohlížeči, ostatní a Rakousko viz `reference/portaly.md`. Sňatek hledej nejdřív
-   ve farnosti nevěsty.
+3. **Najdi svazek**: podle obce → farnost → archiv. ARON: `python3 -I tools/aron_search.py "Obec"`, SOA Třeboň:
+   `tools/trebon.py`, SOA Plzeň: `tools/portafontium.py`, SOA Praha (střední Čechy): `tools/ebadatelna.py`,
+   Praha: `tools/ahmp_search.sh`; ostatní a Rakousko viz `reference/portaly.md`. Sňatek hledej nejdřív ve farnosti nevěsty.
    Je-li ke svazku index (rejstřík), začni jím. Starší matriky (před ~1784) bývají ve faře sousedního města.
 4. **Stáhni snímek** do `pracovni/<svazek>/` a nech ho tam – před dalším stažením se podívej, jestli ho už nemáš
-   (šetří čas, archiv i CAPTCHY). Najdi zápis, **přečti ho sám ze snímku** (přiblíž si výřez v plném rozlišení).
+   (šetří čas, archiv i CAPTCHY). Zápis najde a **přečte ze snímku pomocník na nejsilnějším modelu** (výřez v plném rozlišení), hlavní konverzace obrázek neotvírá.
 5. **Zapiš nález** (vždy všech 6 kroků, i když to zdržuje):
    1. svazek do `data/svazky.json` (ARON: `python3 -I tools/aron_img.py <apu> svazek`),
    2. zápis do `data/zaznamy.json` (klíč = popisný název, např. `holice_krest_jan_novak_1890`; odkaz na snímek) přes `tools/zapis.py`,
@@ -138,6 +68,8 @@ Základní smyčka pro každou osobu:
    4. rámeček čteného místa: `python3 -I tools/ramecek.py <klíč> x0,y0,x1,y1` a **prohlédni si** `pracovni/ramecek_<klíč>.jpg`,
    5. přepis originálu a český překlad do `data/prepisy.json` (nejistá místa „(?)“, nečitelná „[…]“),
    6. osobu/osoby do `data/osoby.py` (`f` fakta, `r` klíč zápisu, `st="doc"`), sourozence a kmotry-příbuzné do `SIDE`.
+   Víc zápisů najednou: kroky 1–5 pro celou dávku jedním voláním `python3 -I tools/zapis_davka.py pracovni/<úkol>/davka.json`
+   (popis vstupu v nástroji); osobu najdeš bez čtení celého souboru přes `python3 -I tools/osoba.py <číslo|id>`.
 6. **Zapiš hledání do deníku** `data/research_log.md` – i neúspěšné, s rozsahem (které roky / snímky jsi prošel).
    Narazíš-li po cestě na **zjevně související výskyt** (vzácné příjmení rodu, stejný dům, jméno z rodinného
    vyprávění), zapiš ho do výsledku v deníku se snímkem – je to jen stopa, ne doklad. Když se hledání zasekne,
@@ -150,6 +82,11 @@ Pravidla, která chrání kvalitu (naučená na skutečném projektu):
 - **Zápis do dat:** `zaznamy`, `svazky`, `prepisy`, `dokumenty` přes `python3 -I tools/zapis.py <soubor> <klíč> pracovni/x.json`
   (objekt napiš do `pracovni/x.json`, nástroj změní jen tu položku), `osoby.py` a markdown nástrojem pro úpravu souborů.
   Nikdy `sed -i` ani skript, který soubor přepíše celý – rozbije formát a v historii je pak změněný celý soubor.
+- **Velké datové soubory nečti celé** (`osoby.py`, `prepisy.json`, `zaznamy.json`). Osoby vždy přes `tools/osoba.py`
+  (`<číslo|id>`, `--hledej jméno`, `--fakta místo nebo rok`, `--zaznam klíč`, `--issues text`, celá poznámka `--note`);
+  ruční `grep`/`sed` nad `osoby.py` vrací celé dlouhé řádky i s poznámkami.
+  Velké dávky děl: zapisovatel ~5 zápisů, čtenář 2–3 zápisy na jednoho pomocníka; kontext jinak roste a každý krok ho čte znovu.
+  Hlavní konverzace snímky neotvírá – čtou je výzkumní pomocníci a ověřuje druhý slepý čtenář (viz „Pomocníci“).
 - **`doc` jen to, co jsi četl přímo na snímku.** Shoda jména a doby bez přímého dokladu = `prob` + poznámka proč.
 - **Nic nedomýšlej.** Nejisté čtení „(?)“, rozpory zapiš do `ISSUES`. Písaři se pletli (jména sourozenců, věk, Anna/Františka).
 - **Čti celý zápis včetně okrajů** – pozdější poznámky o úmrtí, sňatku, legitimaci bývají nejcennější.
@@ -162,9 +99,9 @@ Pravidla, která chrání kvalitu (naučená na skutečném projektu):
 - **Pozemkové a majetkové prameny (pozemkové knihy, lánové rejstříky, katastry):**
   Při bádání v konkrétní vsi nebo při dosažení konce matrik (17.–18. století) vždy nabídni a prověř:
   `python3 -I tools/pozemky.py hledat "Obec" [--dum CP]`
-  - **Pozemkové a gruntovní knihy** (MZA ARON fond C 17 a velkostatky): `pozemky.py knihy <obec>` – zápisy o koupi/prodeji gruntu, předání synovi, soupisy věna a výminků, vyrovnání sourozenců. Snímky knih lze prohlížet v ARONu nebo stáhnout výřez přes `pozemky.py snimek <id> <n> out.jpg`. Začni `pozemky.py predci <obec>` a postupem v sekci „Jak správně bádat v pozemkových knihách“ níže.
+  - **Pozemkové a gruntovní knihy** (MZA ARON fond C 17 a velkostatky): `pozemky.py knihy <obec>` – zápisy o koupi/prodeji gruntu, předání synovi, soupisy věna a výminků, vyrovnání sourozenců. Řeší spory při stejnojmenných předcích. Snímky knih lze prohlížet v ARONu nebo stáhnout výřez přes `pozemky.py snimek <id> <n> out.jpg`. Začni `pozemky.py predci <obec>` (koho a který dům hledat) a postupem v sekci „Jak správně bádat v pozemkových knihách“ níže.
   - **Lánové rejstříky 1669–1679** (MZA fond D 1): `pozemky.py lanove <obec>` – nejstarší moravský katastr (obdoba české berní ruly), jmenovité soupisy usedlostí často se jménem hospodáře z r. 1657 po třicetileté válce.
-  - **Stabilní katastr a indikační skici (1824–1843)**: `pozemky.py katastr <obec> [--dum CP]` – ČÚZK archiv (císařské otisky) a MZA indikační skici. V indikačních skicách jsou u jednotlivých parcel a domů přímo vepsána jména hospodářů v době zaměření.
+  - **Stabilní katastr a indikační skici (1824–1843)**: `pozemky.py katastr <obec> [--dum CP]` – ČÚZK archiv (císařské otisky) a MZA indikační skici. V indikačních skicách jsou u jednotlivých parcel a domů přímo vepsána jména hospodářů v době zaměření!
 - **Hroby, pomníky a vojenská pietní místa (VETS.cz, hřbitovní správy):**
   Pro osoby z 19.–20. století (padlí ve válkách, oběti perzekuce, významní předci, hrobová místa rodiny):
   `python3 -I tools/pieta.py vets hrdina "Příjmení" [--jmeno Jméno]`
@@ -174,7 +111,7 @@ Pravidla, která chrání kvalitu (naučená na skutečném projektu):
 - **Školní a obecní kroniky (MZA ARON / SOkA):**
   Pro dokreslení lidského příběhu rodu (požáry, neúrody, cholera, výstavba silnic, spory, zápisy starostů, školní docházka a seznamy žáků):
   `python3 -I tools/kroniky.py hledat "Obec" [--druh obec|skola|vse] [--digitalizovane]`
-  - `kroniky.py info <apu_id>`: inventární popis fondu.
+  - `kroniky.py info <apu_id>`: inventární popis fondu (obsah jednotky, signatura, uložení v archivu).
   - `kroniky.py snimek <apu_id> <n> out.jpg`: přímé stažení snímku digitalizované kroniky v plném rozlišení přes IIPSrv Deepzoom.
 - **Ztotožnění míst ověř** podle panství/kraje v zápisu (německé „Langenau“ je v Čechách několikrát – rozhodne „bey Hohenelbe“ = u Vrchlabí).
 - **U úředníků, vojáků, lékařů, učitelů, farářů** zkus noviny a ročenky (`reference/portaly.md` → Noviny): ukážou
@@ -187,33 +124,33 @@ Pravidla, která chrání kvalitu (naučená na skutečném projektu):
   kde uživatel u každého klikne na odpověď. Když to jde, použij artefakt s ukládáním odpovědí, jinak HTML soubor
   s tlačítkem „stáhnout odpovědi“. Odpovědi pak zapracuj a zapiš do deníku.
 
-### Šetrně k archivům – brzda `tools/slusne.py`
-Archivy blokují IP adresu po sérii rychlých dotazů (MZA i celou síť na hodiny, ZA Opava na 30 minut). Blokaci
-nezpůsobují nástroje, ale rychlé dočasné skripty a smyčky `curl`. Nástroje v `tools/` mají brzdu samy: společný limit
-pro každý web (dotaz 1 za 2 s, obrázky 10 za s) pro všechny procesy na počítači.
-- **Síť jen přes brzdu, i u pomocníků:** vlastní skript `python3 -I tools/slusne.py pracovni/x.py …`, curl
-  `python3 -I tools/slusne.py curl …`, shellový skript `python3 -I tools/slusne.py bash pracovni/x.sh`. Přímé
-  `curl`/`wget` má projekt zakázané (`.claude/settings.json`); i místní náhled webu zkoušej přes `slusne.py curl`.
-- **Hláška „slusne: … je zastavený“ (kód 3)** = archiv dal najevo, že ho zatěžujeme (429/503/403, stránka
-  „zablokováno“, spojení odmítnuto). Nezkoušej to znovu, neobcházej to (jiný nástroj, prohlížeč), řekni to uživateli
-  a dělej jinou práci. Stav: `slusne.py stav`. `slusne.py odblokuj` jen když víš, že šlo o tvou chybu (špatná adresa).
-- **V prohlížeči brzda neplatí:** nejvýš 1 dotaz za 2 s, žádné smyčky `fetch` ani `Promise.all`.
-- **Na jeden archiv nejvýš jeden pomocník.** Víc projektů na jednom počítači má jednu IP adresu.
-
 ### Pomocníci (subagenti) – šetrně
 Na velké kolo (např. „projdi 5 svazků a najdi všechny Nováky“) můžeš pustit 2–4 pomocníky paralelně.
+**Strop na pomocníka: asi 12 snímků a 30 kroků** – napiš mu ho do zadání a práci děl na úzké otázky. Jeden snímek stojí
+kolem 2 000 tokenů a pomocník ho čte znovu při každém dalším kroku (při 45 snímcích a 70 krocích tvoří snímky polovinu
+jeho spotřeby). Pomocník nenačítá skill, `STAV.md` ani `AGENTS.md`; výtah pravidel dostane v zadání.
 Každému dej přesné zadání (svazek, snímky, koho hledat, formát výsledku: klíč, snímek, souřadnice zápisu, přepis)
 a pravidla výše. Pomocník píše jen do `pracovni/pom_<větev>/`, **do `data/` nikdy**. Zapisuješ ty.
 Ať zmíní i zjevně související výskyty (viz krok 6 výše). Výstupy pomocníků v `pracovni/` nemaž, dokud nejsou vytěžené.
-**Jejich čtení vždy ověř sám na snímku** (`python3 -I tools/overit.py <snímek> x0,y0,x1,y1 pracovni/over`, souřadnice jako zlomky 0–1 šířky a výšky, ne pixely, rozdělí zápis
-na dvě čitelné poloviny), než ho zapíšeš jako `doc`. Uživateli to vysvětli správně: pomocníci nečtou hůř, je to stejný
-model. Jde o princip čtyř očí a pomocník nemá kontext (dvě rodiny stejného jména ve vsi, dva Janové na statku).
+**Hlavní konverzace snímky sama nečte.** Každý obrázek v ní zůstane do konce a každý další krok ho čte znovu – je to
+nejdražší místo celé práce. Výzkum zadávej **výzkumným pomocníkům na silném modelu** (stejně silném jako hlavní, ne
+levném): jedna otázka („zemřela 1880–1895 v Holicích Nováková? kolik jí bylo?“), odpověď textem – výsledek, přepis
+zápisu, svazek, snímek, souřadnice výřezu, prošlý rozsah snímků (i při „nic“) a řádek `nečteno: …`.
+**Každou stranu čtenou v plném rozlišení pomocník přepíše celou do souboru** `pracovni/pom_<větev>/strany/<svazek>_sn<N>.md`
+(všechny zápisy, nejen hledaný), aby se neztratily vedlejší osoby; v odpovědi uvede jen zápisy s příjmeními
+z rodokmenu (seznam příjmení mu dej v zadání). Náhledy, kterými jen listuje, nepřepisuje. Pozdější otázky pak řeší
+`grep` v přepisech stran místo nového čtení snímků.
+**Ověření = čtyři oči, bez obrázku v hlavní konverzaci:** výřez nálezu (`python3 -I tools/overit.py <snímek> x0,y0,x1,y1
+pracovni/over`, souřadnice jako zlomky 0–1 šířky a výšky, ne pixely, rozdělí zápis na dvě čitelné poloviny) dostane
+**druhý pomocník na silném modelu naslepo** – bez prvního přepisu, jen „přepiš tento zápis“. Ty porovnáš oba texty:
+shoda → zápis jako `doc`; rozdíl v jménu, datu, věku nebo domě → třetí slepé čtení, nebo dotaz uživateli. Kontext
+(dvě rodiny stejného jména ve vsi, dva Janové na statku) hlídáš ty, pomocník ho nemá. Snímek si v hlavní konverzaci
+otevři jen na výslovné přání uživatele.
 Prohlížeč může mít najednou jen jeden pomocník, proto dávej přednost nástrojům bez prohlížeče.
-**Pomocníky na hledání smíš spouštět na levnějším modelu** (Claude Agent s `model: "sonnet"`, Gemini s `flash_lite` nebo `flash`): procházení knih a nalezení zápisu (svazek, snímek, oddíl, řádek, folio) zvládnou a stojí jen zlomek nákladů. **Přepis celého zápisu levný pomocník nedělá** – v praxi si vymýšlí kněze, kmotry, příčiny smrti, rodiče rodičů i dvojčata, která v zápisu nebyla. Od pomocníka chtěj jen: kde zápis je, výřez z plného rozlišení, co na řádku jistě vidí (jméno, datum, dům) a řádek `nečteno: …`. Přepis, ověření na snímku a zápis do dat dělá hlavní model (ty). Výsledky pomocníka nejdřív prožeň `python3 -I tools/kontrola_vysledku.py <vysledky.md>` (vymyšlená čísla osob, náhledy místo plného rozlišení, výřez z jiné stránky).
+**Pomocníky na hledání smíš spouštět na levnějším modelu Gemini na low** (`invoke_subagent` s `Model: "flash_lite"`, případně `Model: "flash"`): procházení knih a nalezení zápisu (svazek, snímek, oddíl, řádek, folio) zvládnou a stojí jen zlomek nákladů. **Přepis celého zápisu levný pomocník nedělá** – v praxi „doplnil“ kněze, kmotry, příčiny smrti, rodiče rodičů i dvojčata, která v zápisu nebyla (12 ze 13 zápisů). Od pomocníka chtěj jen: kde zápis je, výřez z plného rozlišení, co na řádku jistě vidí (jméno, datum, dům) a řádek `nečteno: …`. Přepis a ověření dělají pomocníci na silném modelu (viz výše), zápis do dat ty. Výsledky pomocníka nejdřív prožeň `python3 -I tools/kontrola_vysledku.py <vysledky.md>` (vymyšlená čísla osob, náhledy místo plného rozlišení, výřez z jiné stránky).
 Osvědčilo se 3–4 pomocníci na různé větve a archivy současně, jedno kolo ≈ 15–25 nových předků.
-Pomocníci stojí hodně kreditů – před velkým kolem řekni uživateli, co plánuješ a proč, a nech si to schválit.
-Do zadání jim napiš technické pasti z `reference/matriky.md` (macOS: zsh; Windows: `python -I -X utf8`, `magick`)
-a pravidla brzdy výše (síť jen přes `tools/slusne.py`, při hlášce „zastavený“ skončit a ohlásit).
+Před velkým kolem řekni uživateli, co plánuješ a proč, a nech si to schválit.
+Do zadání jim napiš technické pasti z `reference/matriky.md` (macOS: zsh; Windows: `python -I -X utf8`, `magick`).
 **V zadání chtěj u každého prošlého snímku, co na něm skutečně přečetl** (rok, první jméno), ne jen „prošel jsem
 sn. 20–40“ – pomocník jinak přehlédne, že se mu část snímků nenačetla. Na špatně čitelné knihy (kurent 1. poloviny
 19. století, vybledlé snímky) pomocníky nepouštěj, nebo jim dej přesný snímek; ARON a Porta fontium zvládají dobře.
@@ -221,7 +158,8 @@ sn. 20–40“ – pomocník jinak přehlédne, že se mu část snímků nenač
 ### Kdy přestat
 Linie končí, když matriky mlčí (nemanželské dítě bez otce, shořelé knihy, chybějící svazky) nebo když jsi
 v 17. století. Zapiš to do `ISSUES`/`archivni_dotazy.md` a jdi na jinou větev. Průběžně aktualizuj `data/STAV.md`
-(„Rozpracováno“), aby šlo kdykoli navázat.
+(„Rozpracováno“), aby šlo kdykoli navázat. Sekci drž do asi 5 kB: jen otevřené věci a odkazy na pracovní soubory.
+Hotové přesuň do `data/STAV_archiv.md` (podrobnosti jsou v deníku) – `STAV.md` se čte na začátku každé konverzace.
 
 ## Fáze 3 – Zajímavosti a Příběh hlavního rodu
 Podrobně `reference/pribehy.md`. Tohle je to, co rodina na webu čte nejradši, takže na to nezapomínej a nenechávej to na konec.
@@ -235,7 +173,7 @@ Podrobně `reference/pribehy.md`. Tohle je to, co rodina na webu čte nejradši,
 ## Fáze 4 – Web
 Podrobně `reference/web.md`. Ve zkratce:
 1. `cd web && npm install` (jednou), pak `npm run nahled` → http://localhost:4321 – ukaž uživateli. V cloudovém prostředí
-   (claude.ai) localhost neuvidí – pošli mu snímky stránek (headless prohlížeč) nebo nasaď náhled.
+   (pokud není localhost dostupný) pošli uživateli snímky stránek (headless prohlížeč) nebo nasaď náhled.
 2. Nastav `data/web.json`: název, úvod, kontakt a **přihlašovací otázku a odpověď** (web je jen pro rodinu).
 3. Po každé změně dat: `npm run data && npm run build` (nebo znovu `npm run nahled`). Hlášky `POZOR: nefunkční odkaz`
    oprav hned (adresa osoby se mění, když se jí doplní rok narození).
@@ -273,7 +211,6 @@ Nedělej to pořád. Postup:
 - Nestahuj hromadně z placených služeb (MyHeritage, Ancestry, Geni…) a neobcházej jejich ochranu –
   automatické procházení stovek záznamů vede k **zablokování účtu**. Čti jen to, co uživatel otevře, nebo co potřebuješ jednotlivě.
 - Nezadávej za uživatele hesla, platební údaje, neřeš CAPTCHA, nekupuj předplatné.
-- Neobcházej brzdu `tools/slusne.py` ani blokaci archivu.
 - Nedávej na web podrobnosti o žijících lidech bez jejich souhlasu.
 - Nepřepisuj data bez zálohy v gitu; po větším kroku navrhni uložení (`git add -A && git commit -m "…"`).
 
@@ -314,10 +251,10 @@ Nedělej to pořád. Postup:
 | `ramecek.py <klíč> x0,y0,x1,y1` | rámeček čteného místa + kontrolní obrázek |
 | `mista.py pridej "Obec"` / `mista.py` | místa pro mapu (souřadnice z OpenStreetMap) |
 | `zapis.py <soubor> <klíč> <vstup.json> [--sloucit]` | přidá / změní položku v `zaznamy`, `svazky`, `prepisy`… beze změny formátu |
-| `slusne.py <skript.py> / curl … / bash x.sh / stav` | brzda proti zablokování archivem – vlastní skripty a curl spouštěj přes ni |
-| `cache.py` | sdílená cache celých snímků (`~/.cache/rodokmen_snimky`); stahovací nástroje ji používají samy – stejný snímek podruhé jde z disku, ne z archivu |
 | `kontrola.py` | kontrola dat; hlásí i citlivé údaje na webu a kdy psát příběh |
 | `export_web.py` | data → web (volá ho `npm run data`) |
+| `fan_chart.py vystupy/` | vějíř předků jako plakát k tisku |
+| `sit.py` | sdílené HTTP/1.1 spojení (keep-alive, TLS reuse, gzip, šetrné pauzy pro archivy) |
 | `mza.py hledat / fary / knihy / info / snimek` | přímé stahování a vyhledávání z MZA Brno (Acta Publica) bez prohlížeče |
 | `najdi_vyrez.py <stránka.jpg> <výřez.jpg>` | bleskové nalezení polohy výřezu ve velké stránce (OpenCV FFT, 0.5 s; souřadnice 0..1 pro vyrez.py a ramecek.py) |
 | `dum.py "Obec" <čp> [--zapis]` | geokódování konkrétního domu (čp.) pro mapu webu |
@@ -332,21 +269,6 @@ Nedělej to pořád. Postup:
 | `prameny.py hledat kramerius / vua / cevh`, `fronta navrhni / spustit / vysledky` | noviny, seznamy ztrát 1914–1919, padlí v 1. sv. válce, válečné hroby |
 | `arolsen.py hledat / karta` | Arolsen Archives: nucené nasazení, oběti války a perzekuce |
 | `scitani.py plan / najdi / hlavicky / snimek` | sčítání lidu 1857–1921 (Morava, portál MZA) |
-| `fan_chart.py vystupy/` | vějíř předků jako plakát k tisku |
 
-## Jak správně bádat v pozemkových knihách a gruntovnicích
-Pozemkové knihy obsahují trhové smlouvy (Kaufvertrag / Nowý Zápis), předání usedlostí, vyplacení sourozenců a výminky.
-**Nikdy nestahuj snímek 1 jako „doklad“!** Snímky 1–3 jsou moderní archivní desky nebo úvodní dekrety.
-Správný postup:
-0. **Koho hledám:** `python3 -I tools/pozemky.py predci "Obec"` vypíše, kdo z rodokmenu v obci žil, v kterém domě a kdy. Bez předka v obci kniha rodokmenu nic nedá. Knihu vyber podle obce **domu** předka (ne podle farnosti) a podle let, kdy tam hospodařil.
-1. **Kniha:** Vyhledej knihy pro danou obec (`python3 -I tools/pozemky.py knihy "Obec"`). Zkontroluj časový rozsah a zda má digitalizované snímky online.
-2. **Rejstřík (index):** Stáhni náhledy úvodních snímků knihy (`python3 -I tools/pozemky.py rejstrik <apu_id> [--od 2] [--do 8]`). Staré knihy jsou indexovány podle vsí a uvádějí jména hospodářů a čísla **listů (folií)**, např. *fol. 111*.
-3. **Nalezení folia:** Číslo snímku odpovídá přibližně: *číslo folia + počet listů předsádky/rejstříku*. Většina gruntovnic má gruntu vyhrazen blok 8–10 listů.
-4. **Trhová smlouva / Zápis:** Vyhledej smlouvu, kde předek usedlost kupuje nebo přejímá (`Nowý Zápis`). Stáhni plné rozlišení (`snimek <apu_id> <číslo>`). Přečti a přepiš:
-   - datum a rychtáře / konšely obce,
-   - kupní cenu v rýnských zlatých (fl.), hotovost (závdavek na ruku),
-   - roční splátky a komu se vyplácely (sirotčí podíly předchozího hospodáře, sourozenci),
-   - výminek (*Wýminek*): kolik měřic pole ve kterých tratích, kopy naddělkem, část zahrady, loučka u potoka, naturální dávky,
-   - inventář živnosti: železný vůz, rádlo s železem, brány, nářadí, dobytek.
-5. **Roční splátky (rathunky / kvitance):** Na následujících listech sleduj roční zápisy o splátkách. Ukazují, jak dlouho předek hospodařil a v kterém roce usedlost postoupil další generaci. Srovnej se sňatky a úmrtími v matrice.
-6. **Ztotožnění a zápis:** nález patří předkovi jen při shodě jména, domu a let s fakty z kroku 0 – jinak je to stopa do deníku, ne „doložená kontinuita rodu“. Číslo osoby `#N` piš jen ověřené v `osoby.py`. Zápis druhu `J` s výřezem z plného rozlišení; z náhledů rejstříku (`…_nahled.jpg`) se nic necituje. Kurent 18. století je těžký: nejistá slova „(?)“, nečitelné „[…]“, nic nedoplňovat.
+## Pozemkové knihy a gruntovnice
+Než otevřeš pozemkovou nebo gruntovní knihu, přečti `reference/pozemkove_knihy.md` (postup od rejstříku k foliu).

@@ -56,7 +56,7 @@ def geokoduj(obec, cp):
     ob = bez_diakritiky(obec).lower()
     dotazy = [f"{obec} {cp}"]
     if m.get("dotaz"):
-        dotazy.append(re.sub(r"^([^,]+)", rf"\1 {cp}", m["dotaz"]))   # „Chlum u Třebíče 9, Česko“
+        dotazy.append(re.sub(r"^([^,]+)", rf"\1 {cp}", m["dotaz"]))   # „Holice u Pardubic 9, Česko“
     for q in dotazy:
         for x in nominatim(q):
             adr = x.get("address", {})

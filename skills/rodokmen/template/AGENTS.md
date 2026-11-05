@@ -2,9 +2,11 @@
 
 Tohle je projekt rodokmenu vedený skillem **rodokmen**. Na začátku každé konverzace:
 1. Načti skill `rodokmen` (pokud ještě není načtený).
-2. Přečti `data/STAV.md` – stav, pravidla a co je rozpracované – a konec `data/research_log.md`.
+2. Přečti `data/STAV.md` – stav, pravidla a co je rozpracované – a posledních 5 řádků `data/research_log.md` (`tail -n 5`, deník má dlouhé řádky).
+   Jsi-li pomocník (subagent), body 1–3 přeskoč a řiď se jen svým zadáním. **Jeden úkol = jedna konverzace:** po uzavřeném
+   úkolu zapiš stav do `data/STAV.md` a navrhni uživateli novou konverzaci (každý krok čte znovu celou dosavadní konverzaci).
 3. Pokračuj tam, kde se skončilo. Komunikuj česky, stručně a srozumitelně pro člověka bez zkušeností s genealogií a programováním.
-4. Pro pomocníky (subagenty) na **hledání** ve svazcích (který snímek, oddíl, rok, řádek, folio) smíš použít levnější Gemini model na low (`Model: "flash_lite"` nebo `"flash"`). **Přepis zápisu levný pomocník nedělá** – jen napíše, kde zápis je, a co na řádku jistě vidí (jméno, datum, dům). Přepis, ověření a zápisy dělá hlavní model. (Levný pomocník má tendenci domýšlet kněze, kmotry, příčiny smrti, rodiče i dvojčata, která v zápisech nejsou.)
+4. Pro pomocníky (subagenty) na **hledání** ve svazcích (který snímek, oddíl, rok, řádek, folio) smíš použít levnější Gemini model na low (`Model: "flash_lite"` nebo `"flash"`). **Přepis zápisu levný pomocník nedělá** – jen napíše, kde zápis je, a co na řádku jistě vidí (jméno, datum, dům). Přepis a ověření dělají pomocníci na silném modelu (viz pravidla níže), zápisy hlavní model. (Levný pomocník má tendenci domýšlet kněze, kmotry, příčiny smrti, rodiče i dvojčata, která v zápisech nejsou.)
 5. Co by šlo ve skillu zlepšit (chyby nástrojů, nové archivy, nápady), zapisuj do `poznamky_pro_skill.md` – viz skill, sekce „Poznámky pro správce skillu“.
 
 ## Pravidla, která chrání kvalitu (platí vždy)
@@ -13,8 +15,24 @@ Tohle je projekt rodokmenu vedený skillem **rodokmen**. Na začátku každé ko
   Ve výsledcích pomocníka má každý úkol řádek `nečteno: …` (co na výřezu přečteno nebylo; „nečteno: nic“ jen když
   opravdu nic). Z náhledu (`…_nahled.jpg`, `--nahled`, šířka pod ~1600 px) se nic neopisuje ani necituje – slouží jen
   k nalezení roku, oddílu, řádku nebo folia. Výřez musí obsahovat hledané jméno.
-- **Čísla osob `#N` jen ověřená** (`grep -n "^    N:" data/osoby.py`). Osoba, která v rodokmenu není, se píše jménem
+- **Čísla osob `#N` jen ověřená** (`python3 -I tools/osoba.py N`). Osoba, která v rodokmenu není, se píše jménem
   bez čísla. `kontrola.py` vymyšlené číslo v deníku, STAV.md a textech webu hlásí jako CHYBU.
+- **Velké datové soubory nečti celé** (`data/osoby.py` ~540 kB, `prepisy.json`, `zaznamy.json`, `zvyrazneni.json`).
+  Osobu, zápis nebo otázku vypiš cíleně: `python3 -I tools/osoba.py <číslo|id>`, `--hledej "jméno"`, `--zaznam <klíč>`,
+  `--fakta "místo nebo rok"`, `--issues "text"` (celá poznámka `--note`). `data/osoby.py` nečti ručně (`grep`, `sed`, rozsah
+  řádků): řádky mají až 4 kB a svezou se s nimi poznámky. Celý soubor zahltí kontext a každý další krok ho čte znovu.
+- **Velké dávky děl, kontext pomocníka drž malý**:
+  zapisovatel nejvýš ~5 zápisů, další dávku dostane nový pomocník; čtenář 2–3 zápisy a nejvýš
+  ~5 výřezů na zápis (≤ 1500 px); žádný pomocník víc než asi 12 snímků a 30 kroků (snímek ≈ 2 000 tokenů a čte se
+  znovu při každém dalším kroku). Nové zápisy dávky zapisuj jedním voláním `python3 -I tools/zapis_davka.py
+  pracovni/<úkol>/davka.json` (výřez, rámeček, přepis, záznam, svazek; jeden souhrnný obrázek rámečků). Pomocníkovi
+  dej výtah pravidel a vzorovou položku (`osoba.py --zaznam <klíč>`), ne celé AGENTS.md.
+- **Hlavní konverzace snímky nečte** (každý obrázek v ní zůstane a každý další krok ho čte znovu). Snímky čtou
+  výzkumní pomocníci na silném modelu (ne flash): jedna otázka, odpověď textem (výsledek, přepis, svazek, snímek,
+  souřadnice výřezu, prošlý rozsah i při „nic“, `nečteno: …`). Každou stranu čtenou v plném rozlišení přepíší celou do
+  `pracovni/pom_<větev>/strany/<svazek>_sn<N>.md`, v odpovědi jen zápisy s příjmeními z rodokmenu (seznam jim dej).
+  Ověření: výřez (`tools/overit.py`) přečte naslepo druhý pomocník bez prvního přepisu; hlavní model porovná texty,
+  při rozdílu třetí čtení nebo dotaz uživateli. Snímek v hlavní konverzaci jen na výslovné přání uživatele.
 - **Nález v gruntovní knize, sčítání nebo kronice patří předkovi jen při shodě jména, domu a let** s jeho fakty
   (`tools/pozemky.py predci "Obec"` vypíše, kdo z rodokmenu v obci žil a v kterém domě). Jinak je to „stopa“, ne doklad,
   a nepíše se „doložena kontinuita rodu“.
@@ -25,14 +43,24 @@ Tohle je projekt rodokmenu vedený skillem **rodokmen**. Na začátku každé ko
 - **Cizí pracovní složky v `pracovni/` nemaž**, když na ně odkazuje deník; zastaralé označ v deníku.
 - **Do faktů `f` osoby se stavem `doc` patří jen to, co je přečteno na snímku některého z jejích zápisů.**
   Údaje z rodinného GEDCOMu (MyHeritage), od rodiny nebo z cizího stromu dej do `note` s uvedením zdroje
-  („podle rodinného stromu MyHeritage, neověřeno“). Nikdy v deníku nepiš, že zápis dokládá něco, co v něm není.
+  („podle rodinného stromu na MyHeritage, neověřeno“). Nikdy v deníku nepiš, že zápis dokládá něco, co v něm není.
   Když GEDCOM odporuje matrice (věk v zápisu ≠ rok narození ve stromu), platí matrika a rozpor jde do `ISSUES`.
-- **`datum` v `zaznamy.json` česky**: `4. 6. 1822`, ne `1822-06-04` (web jinak prohodí den a měsíc při řazení).
+- **`datum` v `zaznamy.json` česky**: `4. 6. 1880`, ne `1880-06-04` (web jinak prohodí den a měsíc při řazení).
 - **Rámečky jen přes `tools/ramecek.py`** – klíč v `zvyrazneni.json` je `boxes`. Výřez dělej velkoryse
   (zápis + hlavička sloupců + okrajové přípisky), rámeček pak vymezí čtený zápis; rámeček přes celý obrázek je k ničemu.
 - **Překlad `cs` a `shrnuti` jsou pro rodinu**: překlad zápisu v 1–3 odstavcích s vysvětlením pojmů, shrnutí 1–3 věty.
   Žádné oddíly „Genealogický význam…“, žádné vykřičníky, žádná čísla Kekulé v textu. Objevy patří do deníku
   a do `zajimavosti.md`.
+- **`note` a `pribeh` osoby čte rodina (web, GEDCOM pro MyHeritage)** – pište je jako text pro člověka, ne pracovní záznam.
+  Nepatří tam: cesty k souborům (`pracovni/…`, `dokumenty/…`), odkazy na deník („deník ř. 392“), interní pojmy
+  (`SIDE`, `ISSUES`, id osob), historie přečíslování („dřív #4608“), kdo co schválil, ani vlastní přezdívky
+  („generace z plakátu“) – pište „generace, kterou matriky vyvrátily“.
+  Pramen uveďte klíčem zápisu (web i GEDCOM z něj udělají čitelný název) nebo slovy („oddací matrika Holice,
+  sign. 1234, snímek 42“). Postup hledání a rozhodování patří do deníku.
+- **Rodinné a internetové zdroje pojmenujte podle autora, vždy stejně** („rodokmen Jana Nováka“, „strom Marie Novákové na MyHeritage“), ne
+  podle vzhledu a bez zkratek („plakát“, „strom M. N.“). Ve faktech a příbězích zdroj nejmenujte: fakt dostane jen značku `{{rodina}}`
+  nebo `{{strom}}`, zdroj patří do `note`. Výjimka je rozpor – u dvou různých dat napište, odkud je které a které je věrohodnější.
+  Že tip pomohl zápis najít („nalezeno podle stromu…“), do textu nepatří, to je postup hledání.
 - **Nejisté místo (?) porovnej s mapou okolí farnosti**, než ho zapíšeš.
 - **Deník zapisuj i při neúspěchu** (svazek, snímky od–do, co na nich bylo). Deník se samými úspěchy je podezřelý.
 - **Ukládej do gitu po každém dokončeném zápisu**, nejpozději po třech. Neuložená práce za celý den je riziko.
@@ -42,8 +70,8 @@ Tohle je projekt rodokmenu vedený skillem **rodokmen**. Na začátku každé ko
   - `n` = **rodné příjmení** („Marie Nováková“), nikdy „Marie Dvořáková (roz. Nováková)“.
   - **Příjmení po svatbě se nezahazuje:** fakt `"provdaná Dvořáková"`, u více sňatků v pořadí
     `"provdaná Černá, později Dvořáková"` – tvar opiš z matriky, neodvozuj.
-  - **Každý sňatek je vlastní fakt `×`**, při více sňatcích s pořadím: `"× 1. 29. 2. 1848 František Král († 1855)"`,
-    `"× 2. 22. 1. 1856 Josef Starý"`. Za datem celé jméno partnera (ženy rodným příjmením).
+  - **Každý sňatek je vlastní fakt `×`**, při více sňatcích s pořadím: `"× 1. 12. 2. 1878 Václav Černý († 1885)"`,
+    `"× 2. 3. 5. 1887 Karel Dvořák"`. Za datem celé jméno partnera (ženy rodným příjmením).
   - **Každý partner, který není předek, je osoba** v `SIDE`: `id`, `sex`, `partner=<číslo předka>`, stačí jméno;
     `st` a `r` podle zápisu, ze kterého o něm víme.
   - **Děti z dalších sňatků** dostanou `otec`/`matka` (číslo předka nebo id) a vlastní `n` podle křtu. Legitimaci
@@ -92,7 +120,7 @@ v uživatelově prohlížeči. Automatizovat jde:
 
 **Jak zapracovat nález z těchto pramenů** (jsou to stopy, ne matriční doklady):
 1. Otevři odkaz a přečti si ho sám. Shoda jména nestačí – musí sedět i rok, obec nebo rodina.
-2. Do deníku `research_log.md` řádek se zdrojem (např. „Kramerius NK, Verlustliste 18. 8. 1916, s. 54“) a odkazem.
+2. Do deníku `research_log.md` řádek se zdrojem (např. „Kramerius NK, Verlustliste 3. 2. 1917, s. 12“) a odkazem.
 3. K osobě do `note`: „Stopa: … (zdroj, odkaz)“. Do `f` jen to, co pramen skutečně říká, s uvedením pramene v `note`.
    Do `r` patří jen matriční zápisy. Stav `doc` se nemění kvůli novinám – `doc` = přečteno v matrice.
 4. Je-li to obrazový doklad hodný webu (parte, seznam ztrát, pomník), stáhni stránku do `pracovni/`, udělej výřez
@@ -141,10 +169,10 @@ Co není přečtené v matričním zápisu, nesmí na webu vypadat jako fakt. Pl
 `zajimavosti.md` i `pribeh.md`. Označ to značkou, web ji převede na štítek a všechna taková tvrzení sepíše na stránce
 „Co hledáme“ (sekce „Zatím neověřené údaje“); `kontrola.py` je počítá a u faktů `doc` osob je vyžaduje.
 ```
-"† 25. 11. 1849 Dolní Roveň čp. 7 {{strom}}"             # fakt z cizího rodokmenu (MyHeritage, Geni…)
-"padl 4. 7. 1916 u Monfalcone {{rodina: rodinná kronika}}"   # od rodiny / z rodinného dokumentu
+"† 14. 9. 1888 Dolní Roveň čp. 7 {{strom}}"             # fakt z cizího rodokmenu (MyHeritage, Geni…)
+"padl 12. 9. 1917 na frontě {{rodina: rodinná kronika}}"   # od rodiny / z rodinného dokumentu
 "{{hypotéza: Matěj Novák z čp. 112 je týž, kdo r. 1760 koupil kovárnu}}"
-"{{neověřeno: Františka Nováková se provdala za Josefa Krále}}"   # tvrzení bez pramene
+"{{neověřeno: Františka Nováková se provdala za Josefa Dvořáka}}"   # tvrzení bez pramene
 ```
 - V próze obal celé tvrzení: `{{neověřeno: … }}`; u krátkého faktu stačí značka na konci: `… {{strom}}`.
 - Když tvrzení ověříš v zápisu, značku odstraň a do `r` dej klíč zápisu.

@@ -34,6 +34,11 @@ P = {
   `fam` od rodiny (i strom, který si rodina vede sama, např. GEDCOM z jejího MyHeritage), `mh` cizí strom z internetu, `unk`.
 - `LINES = {8: ("Novákové", "Kováři z Holic…"), …}` – jen čísla 8–15; název rodu = příjmení v množném čísle.
 - `SIDE` – sourozenci a další příbuzní: `dict(k=<číslo předka>, n="Josef Novák (1865–1920)", t="text", r=[klíče])`.
+  **Širší rodina se stromem a stránkou:** doplň `id="josef_novak_1865"`, `otec`/`matka` (číslo předka nebo id jiného
+  příbuzného), `sex`, `y`, `f`, volitelně `partner`, `note`, `pribeh`. Bez rodičů je položka jen text u předka `k`.
+- Značky neověřených údajů ve `f`, `note`, `pribeh` i v `.md`: `{{neověřeno: …}}`, `{{rodina: …}}`, `{{strom: …}}`,
+  `{{hypotéza: …}}` (nebo jen `{{strom}}` na konci faktu) – web ukáže štítek a sepíše je na „Co hledáme“.
+- `pribeh` – souvislý příběh osoby (5–15 vět) u položek `P` i `SIDE`; web ho ukáže nad fakty, ve stromu značka ✎.
 - `ISSUES` – dvojice `("Otázka", "Vyřešeno: … / Hypotéza: … / Otevřené: …")` → stránka „Co hledáme“ (vyřešené se skryjí).
   Jde na web – nepiš sem citlivé věci (příčiny úmrtí, rodinné spory) bez souhlasu.
 - `HYPOTEZY` – `dict(rod=8, nadpis="…", text="…", polozky=[("jméno", "text")], zaznamy=[klíče])` → stránka rodu.

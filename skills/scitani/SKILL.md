@@ -53,7 +53,7 @@ Okres na portálu je dobový: Hodov, Přeckov, Čikov → SOkA Žďár n. S.; T�
    `nar` česky „14. 2. 1890“, jen rok „1890“.
 6. **Porovnej**: `scitani.py porovnej pracovni/scitani/prepis/<klíč>.json`
    - `✓` shoda · `≈` sedí jen část (hlášené datum – zapiš, matriku znovu zkontroluj) · `✗` ROZPOR → `ISSUES`
-   - `+ NOVÉ` → doplnit fakt „* 10. 10. 1835 Dolní Roveň (podle sčítání 1900)“; `!` víc kandidátů → rozhodni sám
+   - `+ NOVÉ` → doplnit fakt „* 10. 10. 1875 Dolní Roveň (podle sčítání 1900)“; `!` víc kandidátů → rozhodni sám
    - `?` člověk mimo rodokmen (+ „možná jde o …“ – jiné příjmení po sňatku?) → stopa do `note` příbuzného + deník
    - `–` měl v domě být a není → zkontroluj fakta o bydlišti (stěhování, úmrtí)
    Výstup ber jako návrh – posuzuješ ty (stejné jméno ≠ stejný člověk; rozhodují rodiče, dům, rodiště).

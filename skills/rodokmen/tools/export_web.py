@@ -142,7 +142,7 @@ def structured(s):
 
 
 def manzel(fact):
-    """Jméno ze sňatku: „× 2. 16. 6. 1925 Antonín Holubář († 1950) z Okřešic“ → „Antonín Holubář“ (jako v gedcom.py)."""
+    """Jméno ze sňatku: „× 2. 3. 5. 1887 Karel Dvořák († 1910) z Holic“ → „Karel Dvořák“ (jako v gedcom.py)."""
     t = bez_znacek(fact).lstrip("× ").strip()
     t = re.sub(r"^\d\.\s+(?=\d{1,2}\.\s*\d{1,2}\.\s*\d{4}|\d{4}|\D)", "", t)
     t = re.sub(r"^((kol\.|asi|před|po)\s*)?(\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4}", "", t)
@@ -166,12 +166,15 @@ ZIVOT = (("*", "Narození"), ("křest", "Křest"), ("×", "Sňatek"), ("provd", 
 def zivotni_udaje(facts, htmls):
     """Základní údaje pod jménem osoby s popisky (narození, křest, sňatky, úmrtí, pohřeb) – z faktů „*“, „křest“, „×“, „†“,
     „pohřben(a)“; ostatní fakta (povolání, rodiče, bydliště) zůstanou v seznamu pod příběhem."""
-    life, other = [], []
+    life, other, videno = [], [], set()
     for f, h in zip(facts, htmls):
         label = next((lab for pre, lab in ZIVOT if f.startswith(pre)), None)
-        if not label:
+        if not label or "vyvráceno" in f:   # vyvrácené tvrzení (např. datum z rodinného rodokmenu) není životní údaj
             other.append(h)
             continue
+        if label in videno and label != "Sňatek":   # druhé narození/úmrtí = jiný pramen (odhad z věku, rodinný rodokmen)
+            label += " (jiný údaj)"
+        videno.add(label)
         h = re.sub(r"^\s*(\*|×|†|křest|pohřben[ao]?|provdaná|provd\.)\s*", "", h)
         m = re.match(r"(\d)\.\s+(?=\d{1,2}\.\s*\d{1,2}\.\s*\d{4}|\d{4}|\D)", h) if label == "Sňatek" else None
         if m:
@@ -875,6 +878,7 @@ def main():
     claims = []
     for sl, p in people.items():
         kde = dict(type="osoba", slug=sl, name=p["name"])
+        p["note"], p["story"] = (re.sub(r"\s*\([^()]*\b(?:dokumenty|pracovni|zdroje)/[^()]*\)", "", t or "") for t in (p["note"], p["story"]))   # cesty k souborům čtenáři nic neřeknou (jako bez_cest v gedcom.py)
         raw = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", bez_znacek(p["story"]))
         raw = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", raw)).strip()
         p["storyExcerpt"] = (raw[:220].rsplit(" ", 1)[0] + "…") if len(raw) > 220 else raw

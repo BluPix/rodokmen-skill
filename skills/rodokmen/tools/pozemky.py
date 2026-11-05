@@ -241,7 +241,7 @@ def predci_v_obci(obec: str) -> List[Dict[str, Any]]:
     """Osoby z data/osoby.py, jejichž fakta zmiňují obec (i ve skloňovaném tvaru), s čísly domů.
 
     Slouží jako vstup pro rejstřík pozemkové knihy: koho a který dům v knize hledat. Přídavná jména a příjmení
-    odvozená od obce (Chlumský, okřešický) se nepočítají."""
+    odvozená od obce (Lhotský, holický) se nepočítají."""
     ns: Dict[str, Any] = {}
     exec(open(ROOT / "data" / "osoby.py", encoding="utf-8").read(), ns)
     kmen = re.sub(r"[aeiouy]+$", "", _bez_diakritiky(obec).strip()) or _bez_diakritiky(obec)

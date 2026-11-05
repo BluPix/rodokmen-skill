@@ -6,6 +6,28 @@ dá v repozitáři **Watch → Custom → Releases**.
 
 Projekt založený starší verzí Claude sám nabídne aktualizovat (pozná to podle souboru `VERZE`).
 
+## 0.7.1 – 5. 11. 2026
+
+Menší spotřeba tokenů, čistší texty pro rodinu a ověřený stav nástrojů z praxe.
+
+**Nové**
+- `tools/osoba.py`: výpis osoby, zápisu nebo otázky bez čtení velkých datových souborů.
+- `tools/zapis_davka.py`: celá dávka zápisů jedním voláním (výřez, rámeček, přepis, záznam, svazek).
+- Pravidlo „jeden úkol = jedna konverzace“ a strop asi 12 snímků a 30 kroků na pomocníka.
+- Hlavní konverzace snímky neotvírá: čtou je pomocníci na silném modelu, nález ověří naslepo druhý.
+- Postup pro začátek projektu a pozemkové knihy je v `reference/zacatek.md` a `reference/pozemkove_knihy.md`, `SKILL.md` je kratší.
+
+**Opravy**
+- GEDCOM: životopis jen z příběhu, místo bez zdrojů, věku a poznámek.
+- Web: vyvrácená data nejsou životní údaje, druhé narození nebo úmrtí se ukáže jako „jiný údaj“.
+- Rodinné a internetové zdroje se pojmenovávají podle autora.
+- Z ukázek v nástrojích a návodech zmizely skutečné osobní údaje.
+
+**Změny chování**
+- Stav skillu odpovídá ověřenému nasazení: `novy_projekt.py` už nenabízí hlídač sítě a nezakazuje `curl`/`wget`,
+  brzdu `tools/slusne.py` nevolají `anno.py`, `anno_snap.py`, `aron_search.py`, `kramerius.py`, `mista.py`,
+  `ahmp_search.sh` a `matricula_dl.sh`. U archivů proto hlídej tempo stahování.
+
 ## 0.7.0 – 3. 11. 2026
 
 Nové nástroje pro mimomatriční prameny, interaktivní rodokmen, sčítání lidu a kontrolní pojistky.

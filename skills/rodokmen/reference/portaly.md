@@ -7,7 +7,7 @@ Matriky jsou online u osmi státních archivů – podle toho, **kde předci ži
 | SOA Zámrsk | východní Čechy (Hradecký a Pardubický kraj) | ARON – aron.vychodoceskearchivy.cz | **ano – hotové nástroje** |
 | SOA Praha | střední Čechy | eBadatelna – ebadatelna.soapraha.cz | **ano – nástroj `ebadatelna.py`** (i urbáře a gruntovní knihy) |
 | SOA Plzeň | západní Čechy | Porta fontium – portafontium.eu | **ano – nástroj `portafontium.py`** |
-| SOA Třeboň | jižní Čechy | digi.ceskearchivy.cz | **ano – nástroj `trebon.py`** (vyžaduje standardní prohlížečový User-Agent) |
+| SOA Třeboň | jižní Čechy | digi.ceskearchivy.cz | **jen v prohlížeči** – archiv nástroj od 2. 11. 2026 odmítá (postup níže) |
 | SOA Litoměřice | severní Čechy | Digitální badatelna – digi.soalitomerice.cz | **částečně – `soal_zoomify.py`** (knihu najdi v prohlížeči) |
 | AHMP | hl. m. Praha | katalog.ahmp.cz (Pragapublica) | **ano – `ahmp_search.sh`, `ahmp_scan.py`** |
 | MZA Brno | jižní Morava, Vysočina z části | Acta Publica – www.mza.cz/actapublica | **jen v prohlížeči** – snímek obrazovky přiblíženého zápisu (postup níže) |
@@ -36,11 +36,11 @@ Adresy u nevyzkoušených portálů ověř při prvním použití (portály se m
   („Copulati Gross Lhota“).
 - Ber ohled na server: stahuj jen to, co čteš; žádné hromadné stahování celých svazků.
 
-## SOA Třeboň (digi.ceskearchivy.cz) – hotové nástroje
-- **Nástroj `trebon.py` funguje** se standardním moderním User-Agentem (archiv blokoval pouze řetězec `rodokmen`).
-- Hledání místa: `python3 -I tools/trebon.py misto "Tábor"`.
-- Výpis knih: `python3 -I tools/trebon.py svazky <id_místa>`.
-- Stažení snímku: `python3 -I tools/trebon.py snimek <id_knihy> <číslo_snímku> out.jpg [nahled]`. Stažené snímky jsou ve sdílené cache (`tools/cache.py`).
+## SOA Třeboň (digi.ceskearchivy.cz) – jen v prohlížeči
+- **Od 2. 11. 2026 archiv nástroj odmítá** (HTTP 403 podle User-Agentu „rodokmen“), `trebon.py` je vypnutý a brzda
+  skripty na digi.ceskearchivy.cz zastaví. Neobcházej to (jiný User-Agent, vlastní skript). Matriky čti v prohlížeči
+  (nejlépe Playwright) stejně jako u MZA: přiblížit zápis, uložit snímek obrazovky, `vyrez.py`. Tempo jako člověk, jen
+  stránky, které čteš, žádní pomocníci. Bez prohlížeče ať pošle snímky obrazovky uživatel.
 - Obec: `https://digi.ceskearchivy.cz/<Obec>` (bez diakritiky a mezer, např. `RatiborskeHory`) → stránka místa, vlevo
   „Matriční knihy“ (stránka je v rámci `ram_obsah`) → seznam knih s roky a obcemi; kliknutí otevře knihu v nové záložce.
   **Zkontroluj název a okres**: u stejnojmenných obcí portál vybere jinou (Buk → Bukovka), u měst i okres nebo synagogu.

@@ -20,7 +20,7 @@ def jload(name, default):
 
 
 def manzel(fact):
-    """Jméno ze sňatku: „× 2. 16. 6. 1925 Antonín Holubář († 1950) z Okřešic“ → „Antonín Holubář“ (jako v gedcom.py)."""
+    """Jméno ze sňatku: „× 2. 3. 5. 1887 Karel Dvořák († 1910) z Holic“ → „Karel Dvořák“ (jako v gedcom.py)."""
     t = re.sub(r"\{\{\s*\w+\s*:?\s*|\s*\}\}", "", fact).lstrip("× ").strip()
     t = re.sub(r"^\d\.\s+(?=\d{1,2}\.\s*\d{1,2}\.\s*\d{4}|\d{4}|\D)", "", t)
     t = re.sub(r"^((kol\.|asi|před|po)\s*)?(\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4}", "", t)
@@ -108,7 +108,7 @@ def main():
     for kde, o in [(f"osoba {k}", p) for k, p in P.items()] + [("boční příbuzná", s) for s in SIDE]:
         if re.search(r"\broz\.", o.get("n", "")) or any(f.strip().startswith("roz.") for f in o.get("f", [])):
             warn.append(f"PŘÍJMENÍ – {kde} '{o.get('n')}': do 'n' patří rodné příjmení, příjmení po svatbě jako fakt "
-                        f"„provdaná Došková“, u příbuzné jen s textem do závorky „Marie Nováková (provd. Šindelková, * 1925)“")
+                        f"„provdaná Dvořáková“, u příbuzné jen s textem do závorky „Marie Nováková (provd. Černá, * 1925)“")
     # sňatky: každý manžel(ka) z údaje „×“ má být v datech jako osoba – jinak ho GEDCOM ani strom neznají
     jmena = {k: p.get("n", "") for k, p in P.items()}
     jmena.update({s["id"]: s.get("n", "") for s in SIDE if s.get("id")})
@@ -172,7 +172,7 @@ def main():
     datum_ok = re.compile(r"^(\d{1,2}\. \d{1,2}\. \d{4}|\d{1,2}\. \d{4}|\d{1,2}/\d{4}|\d{4}|(před|po|kol\.|asi|cca) \d{4}|\d{4}–\d{4})$")
     for z in zaz:
         if z.get("datum") and not datum_ok.match(str(z["datum"]).strip()):
-            err.append(f"zápis {z.get('klic')}: datum '{z['datum']}' musí být česky („4. 6. 1822“, „3/1867“, „1797“), ne ISO – web ho jinak špatně seřadí")
+            err.append(f"zápis {z.get('klic')}: datum '{z['datum']}' musí být česky („4. 6. 1880“, „3/1867“, „1797“), ne ISO – web ho jinak špatně seřadí")
     # --- rámečky: klíč musí být 'boxes' (jiný klíč web ignoruje a rámeček nevykreslí)
     for k, e in hl.items():
         if isinstance(e, dict) and "boxes" not in e:
@@ -199,7 +199,7 @@ def main():
                 if not (1 <= mo <= 12) or any(t in text for t in tvary(d, mo, y)):
                     continue
                 if any(t in note for t in tvary(d, mo, y)):
-                    continue   # zdroj toho data je vysvětlený v poznámce („podle rodinného stromu MyHeritage † 25. 11. 1849, neověřeno“)
+                    continue   # zdroj toho data je vysvětlený v poznámce („podle rodinného stromu MyHeritage † 14. 9. 1888, neověřeno“)
                 warn.append(f"osoba {k} ({p.get('n')}): údaj „{f}“ není v žádném z jejích zápisů {p.get('r')} – "
                             f"doplň zdroj do 'note' (rodina, strom MyHeritage…), nebo ho přesuň z faktů; 'doc' = přečteno na snímku")
         # roky života 'y' vs. fakt narození
@@ -235,7 +235,7 @@ def main():
                  if isinstance(s, str) and len(s.strip()) >= 3]
 
     def schvalene(text, m):   # uživatel to na web pustil: v web.json „citlive_schvaleno“ je úryvek textu s tímto slovem
-        umrti = re.search(r"†[^†]{0,30}?\b(1[5-9]\d\d|20\d\d)\b[^†„“]{0,50}$", text[:m.start()])   # „† 28. 5. 1890 Kouty čp. 2 (rakovina…“
+        umrti = re.search(r"†[^†]{0,30}?\b(1[5-9]\d\d|20\d\d)\b[^†„“]{0,50}$", text[:m.start()])   # „† 28. 5. 1880 Holice čp. 2 (tyfus…“
         if umrti and int(umrti.group(1)) < hranice:   # příčina smrti z matriky u úmrtí starého přes 100 let není tajemství
             return True
         for s in schvaleno:
@@ -338,7 +338,7 @@ def main():
 
     log = os.path.join(DATA, "research_log.md")
     rows = sum(1 for l in open(log, encoding="utf-8") if re.match(r"^\| \d+ \|", l)) if os.path.exists(log) else 0
-    # „#N“ v textech musí být existující osoba (pomocník si čísla osob vymýšlel: „Jan Svatoň (#156 / #312)“)
+    # „#N“ v textech musí být existující osoba (pomocník si čísla osob vymýšlel: „Jan Novák (#156 / #312)“)
     for f in ("research_log.md", "STAV.md", "zajimavosti.md", "pribeh.md"):
         cesta = os.path.join(DATA, f)
         if not os.path.exists(cesta):
@@ -346,7 +346,7 @@ def main():
         for i, radek in enumerate(open(cesta, encoding="utf-8"), 1):
             for c in sorted({int(x) for x in re.findall(r"#(\d+)\b", radek)} - set(P)):
                 kde = re.match(r"^\| (\d+) \|", radek)
-                err.append(f"{f} {'ř. deníku ' + kde.group(1) if kde else 'řádek ' + str(i)}: osoba #{c} v osoby.py neexistuje – číslo ověř grepem, nevymýšlej")
+                err.append(f"{f} {'ř. deníku ' + kde.group(1) if kde else 'řádek ' + str(i)}: osoba #{c} v osoby.py neexistuje – číslo ověř přes tools/osoba.py <číslo>, nevymýšlej")
     zn_rx = re.compile(r"\{\{\s*(neověřeno|neovereno|rodina|strom|hypotéza|hypoteza)\b")
     texty_zn = "\n".join(l for l in open(os.path.join(DATA, "osoby.py"), encoding="utf-8") if not l.lstrip().startswith("#"))
     for f in ("zajimavosti.md", "pribeh.md"):

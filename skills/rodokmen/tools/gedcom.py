@@ -24,10 +24,21 @@ def bez_znacek(text):
     return ZN_RX.sub(lambda m: ((m.group(2) or "").strip() + " (neověřeno)").strip(), text or "").strip()
 
 
+CESTA_RX = re.compile(r"\s*\([^()]*\b(?:dokumenty|pracovni|zdroje)/[^()]*\)")
+KLIC_RX = re.compile(r"(?<![\w/\"'])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)(?![\w/\"'])")
+
+
+def bez_cest(text):
+    """Závorka s cestou k souboru projektu („(přepis pracovni/…/x.md)“) je pracovní údaj, čtenáři nic neřekne – pryč."""
+    return CESTA_RX.sub("", text or "")
+
+
 # měsíce v 7. a 6. pádě („před červnem“, „v lednu“) → číslo měsíce
 MESICE = {"lednem": 1, "únorem": 2, "březnem": 3, "dubnem": 4, "květnem": 5, "červnem": 6, "červencem": 7, "srpnem": 8,
           "zářím": 9, "říjnem": 10, "listopadem": 11, "prosincem": 12, "lednu": 1, "únoru": 2, "březnu": 3, "dubnu": 4,
-          "květnu": 5, "červnu": 6, "červenci": 7, "srpnu": 8, "září": 9, "říjnu": 10, "listopadu": 11, "prosinci": 12}
+          "květnu": 5, "červnu": 6, "červenci": 7, "srpnu": 8, "září": 9, "říjnu": 10, "listopadu": 11, "prosinci": 12,
+          "leden": 1, "únor": 2, "březen": 3, "duben": 4, "květen": 5, "červen": 6, "červenec": 7, "srpen": 8,
+          "říjen": 10, "listopad": 11, "prosinec": 12}
 
 ZIJE_LET = 110   # stejné pravidlo jako zije() v export_web.py
 
@@ -44,14 +55,16 @@ def zije(y, facts, *texty):
 
 
 def parse_date_place(text):
-    """Z textu typu '* 12. 11. 1891 Chlum čp. 9' získá (gedcom_date, place)."""
+    """Z textu typu '* 12. 11. 1881 Holice čp. 9' získá (gedcom_date, place)."""
     t = text.lstrip("* ×†").strip()
     
     # Prefixy
-    t = re.sub(r"\s*\([^)]*\)", "", t).strip()   # „(podle sčítání 1857)“ není místo
-    t = re.split(r",\s*(?:pohřben|pochován)", t)[0].strip()   # „…, pohřbena 31. 5. 1946“ není místo
+    while re.search(r"\([^()]*\)", t):   # „(podle sčítání 1857)“ není místo; i vnořené „(75 (?) let)“
+        t = re.sub(r"\s*\([^()]*\)", "", t)
+    t = t.strip()
+    t = re.split(r",\s*(?:pohřben|pochován)", t)[0].strip()   # „…, pohřbena 3. 6. 1936“ není místo
     m = re.match(r"^mezi\s+((?:\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4})\s+a\s+((?:\d{1,2}\.\s*\d{1,2}\.\s*)?\d{4})(.*)$", t)
-    if m:   # „† mezi 1911 a 1921“, „† mezi 31. 10. 1857 a 8. 3. 1860“
+    if m:   # „† mezi 1911 a 1921“, „† mezi 31. 10. 1857 a 31. 12. 1869“
         return f"BET {parse_date_place(m.group(1))[0]} AND {parse_date_place(m.group(2))[0]}", m.group(3).strip(" ,") or None
     prefix = ""
     if t.startswith(("kol.", "cca")):   # vypočteno z věku (při sňatku, úmrtí, sčítání)
@@ -92,8 +105,20 @@ def parse_date_place(text):
 
     return None, t or None
 
+def fakt_bez_poznamek(fact):
+    """Fakt pro čtení data a místa: „* 5. 2. 1890 {{rodina: rodokmen od tety}}“ → „* 5. 2. 1890“ (zdroj není místo).
+    Je-li ve značce celý fakt („{{hypotéza: * 9. 8. 1875 Holice…}}“), zůstane jeho obsah."""
+    return bez_znacek(fact) if fact.lstrip().startswith("{{") else ZN_RX.sub("", fact or "").strip()
+
+
+def ciste_misto(pl):
+    """„Holice čp. 29, výměnkář, 75 let“ → „Holice čp. 29“; co nezačíná velkým písmenem (věk, poznámka), místo není."""
+    pl = re.split(r",|;| – |“|„|\)|\s+let\b", pl or "")[0].strip()
+    return pl if pl[:1].isupper() else None
+
+
 def parse_marriage(fact):
-    """„× 2. 16. 6. 1925 Antonín Holubář († 1950) z Okřešic“ → (2, „16 JUN 1925“, „Antonín Holubář“).
+    """„× 2. 3. 5. 1887 Karel Dvořák († 1910) z Holic“ → (2, „3 MAY 1887“, „Karel Dvořák“).
     Pořadí („2.“) se píše jen u více sňatků; od data ho pozná to, že po něm následuje celé datum, rok nebo jméno."""
     t = bez_znacek(fact).lstrip("× ").strip()
     m = re.match(r"(\d)\.\s+(?=\d{1,2}\.\s*\d{1,2}\.\s*\d{4}|\d{4}|\D)", t)
@@ -117,7 +142,7 @@ def jmeno_sedi(spouse, name):
 
 
 def split_name(full_name):
-    """Rozdělí 'Jméno Příjmení' nebo 'Anna Matějíčková (?)' na jméno a příjmení."""
+    """Rozdělí 'Jméno Příjmení' nebo 'Anna Nováková (?)' na jméno a příjmení."""
     clean = re.sub(r"\s*\([^)]*\)", "", full_name).strip()
     parts = clean.split()
     if len(parts) == 1:
@@ -149,6 +174,7 @@ def generate_gedcom():
     if os.path.exists(os.path.join(DATA, "zaznamy.json")):
         with open(os.path.join(DATA, "zaznamy.json"), encoding="utf-8") as f:
             zaznamy = json.load(f)
+    nazvy = {z["klic"]: z.get("nazev", z["klic"]) for z in zaznamy}
     
     svazky = {}
     if os.path.exists(os.path.join(DATA, "svazky.json")):
@@ -277,7 +303,7 @@ def generate_gedcom():
         lines.append(f"2 GIVN {givn}")
         if surn:
             lines.append(f"2 SURN {surn}")
-        for fact in p.get("f", []):   # příjmení po svatbě („provdaná Rymešová, později Holubářová“) jako další jména
+        for fact in p.get("f", []):   # příjmení po svatbě („provdaná Černá, později Dvořáková“) jako další jména
             m = re.match(r"provd(?:aná|\.)\s+(?!za\b)(.+)", bez_znacek(fact))
             for part in re.split(r",\s*(?:později\s+)?|\s+později\s+", m.group(1)) if m else []:
                 if part[:1].isupper():
@@ -290,10 +316,12 @@ def generate_gedcom():
         birt_done = False
         deat_done = False
         occupations = []
-        for fact in [bez_znacek(x) for x in p.get("f", [])]:
+        for raw in p.get("f", []):
+            fact = bez_znacek(raw)
             if fact.startswith("*") and not birt_done:
                 birt_done = True
-                d, pl = parse_date_place(fact)
+                d, pl = parse_date_place(fakt_bez_poznamek(raw))
+                pl = ciste_misto(pl)
                 lines.append("1 BIRT")
                 if d:
                     lines.append(f"2 DATE {d}")
@@ -301,7 +329,8 @@ def generate_gedcom():
                     lines.append(f"2 PLAC {pl}")
             elif fact.startswith("†") and not deat_done:
                 deat_done = True
-                d, pl = parse_date_place(fact)
+                d, pl = parse_date_place(fakt_bez_poznamek(raw))
+                pl = ciste_misto(pl)
                 lines.append("1 DEAT")
                 if d:
                     lines.append(f"2 DATE {d}")
@@ -329,10 +358,11 @@ def generate_gedcom():
             if not is_living and (isinstance(k, str) or k > 3):
                 lines.append("1 DEAT Y")
 
-        if p.get("note"):
-            lines.append(f"1 NOTE {bez_znacek(p['note'])}")
+        # NOTE = životopis (MyHeritage ho tak ukazuje): jen příběh; pracovní `note` o pramenech a dohledávání je
+        # jen na webu, prameny má GEDCOM v SOUR
         if p.get("pribeh"):
-            lines.append("1 NOTE " + bez_znacek(p["pribeh"]).replace("\n", " "))
+            t = KLIC_RX.sub(lambda m: nazvy.get(m.group(1), m.group(1)), bez_cest(bez_znacek(p["pribeh"])))
+            lines.append("1 NOTE " + t.replace("\n", " "))
 
         # Odkazy na rodiny
         if k in person_famc:
@@ -394,5 +424,21 @@ def generate_gedcom():
         f.write(content)
     print(f"GEDCOM úspěšně vygenerován ({len(P)} osob, {len(families)} rodin, {len(zaznamy)} pramenů) -> {out_web}")
 
+def _test():
+    """python3 -I tools/gedcom.py --test – místo narození/úmrtí bez zdrojů, věku a poznámek."""
+    def mp(f):
+        d, pl = parse_date_place(fakt_bez_poznamek(f))
+        return d, ciste_misto(pl)
+    assert mp("* 5. 2. 1890 {{rodina: rodokmen od tety, 2014}}") == ("5 FEB 1890", None)
+    assert mp("* 30. 6. 1860 Holice {{rodina: rodokmen od tety}}") == ("30 JUN 1860", "Holice")
+    assert mp("† 26. 3. 1871 Holice čp. 29, výměnkář, 75 (?) let, sešlost věkem") == ("26 MAR 1871", "Holice čp. 29")
+    assert mp("{{hypotéza: * 9. 8. 1875 Holice čp. 32 – nejspíš křest Anny}}") == ("9 AUG 1875", "Holice čp. 32")
+    assert mp("{{rodina: † 12. 9. 1917 padl na frontě}}") == ("12 SEP 1917", None)
+    assert mp("† duben 1885 Dolní Lhota čp. 2") == ("APR 1885", "Dolní Lhota čp. 2")
+    assert bez_cest("rodokmen (fotky dokumenty/x/, přepis pracovni/y.md). Dál") == "rodokmen. Dál"
+    assert bez_cest("křest (n_1890_jan_novak, sn. 15)") == "křest (n_1890_jan_novak, sn. 15)"
+    print("ok")
+
+
 if __name__ == "__main__":
-    generate_gedcom()
+    _test() if "--test" in sys.argv else generate_gedcom()

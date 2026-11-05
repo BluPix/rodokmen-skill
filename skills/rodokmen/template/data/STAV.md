@@ -27,7 +27,9 @@ pak konec `research_log.md` a sekci „Rozpracováno“.
 
 ## Pravidla
 1. Než něco ohlásím jako nové, prohledám `osoby.py`, `zaznamy.json` a `research_log.md` (jméno, místo, rok).
-2. Údaj je „doloženo“ (doc) jen tehdy, když jsem ho přečetl přímo na snímku. Čtení od pomocníků ověřím sám.
+2. Údaj je „doloženo“ (doc) jen tehdy, když je přečtený přímo na snímku v plném rozlišení. Snímky čte pomocník na nejsilnějším
+   modelu a nález ověří naslepo druhý. Hlavní agent porovná jen texty a obrázek sám neotvírá – zůstal by v kontextu
+   a každý další krok by ho četl znovu.
 3. Každé hledání (i neúspěšné) zapíšu do `research_log.md`.
 4. Nejistá čtení označím (?) – nic nedomýšlím.
 5. Ke každému novému zápisu: výřez (`tools/vyrez.py`), rámeček (`tools/ramecek.py`) a přepis s překladem.
